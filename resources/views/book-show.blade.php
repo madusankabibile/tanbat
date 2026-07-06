@@ -83,28 +83,18 @@
         @endauth
 
         <div class="bk-actions">
-          @auth
-            @if($book->download_url)
-              <button type="button" class="btn-dl is-counting"
-                      data-countdown="10" data-dl="{{ $book->download_url }}">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                <span data-cd-label>Preparing your download…</span>
-                <span class="btn-dl-counter" data-cd-counter>10s</span>
-              </button>
-            @endif
-          @else
-            <a class="btn-dl btn-dl-gate" href="{{ url('/') }}">
+          @if($book->download_url)
+            <button type="button" class="btn-dl is-counting"
+                    data-countdown="10" data-dl="{{ $book->download_url }}">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              Sign in to download
-            </a>
-          @endauth
+              <span data-cd-label>Preparing your download…</span>
+              <span class="btn-dl-counter" data-cd-counter>10s</span>
+            </button>
+          @endif
           <a class="btn-back" href="{{ url('/books') }}">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             All books
@@ -134,17 +124,16 @@
       <section class="bk-section bk-gate">
         <div class="bk-gate-orb">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
         </div>
         <div class="bk-gate-text">
-          <div class="bk-gate-title">Sign in to visit this book post and download</div>
-          <p class="bk-gate-sub">Tanbat Library is members-only. Create a free account — or sign in — to download <strong>{{ $book->title }}</strong> and join the conversation.</p>
+          <div class="bk-gate-title">Join the conversation on Tanbat</div>
+          <p class="bk-gate-sub">Downloading <strong>{{ $book->title }}</strong> is free and open. Create a free account — or sign in — to react, comment and build your own library.</p>
         </div>
         <div class="bk-gate-actions">
-          <a href="{{ url('/') }}" class="bk-gate-cta">Sign in to continue</a>
-          <a href="{{ url('/') }}" class="bk-gate-ghost">Create a free account</a>
+          <a href="{{ url('/') }}" class="bk-gate-cta">Create a free account</a>
+          <a href="{{ url('/') }}" class="bk-gate-ghost">Sign in</a>
         </div>
       </section>
     @endguest
@@ -282,7 +271,7 @@
         {{-- Sign-in promo --}}
         <div class="bk-side-cta">
           <div class="bk-side-cta-title">Join Tanbat free</div>
-          <p class="bk-side-cta-sub">Download books, save your library, and join the discussion.</p>
+          <p class="bk-side-cta-sub">Save your library, react and join the discussion.</p>
           <a href="{{ url('/') }}" class="bk-side-cta-btn">Create account</a>
           <a href="{{ url('/') }}" class="bk-side-cta-link">Sign in</a>
         </div>
@@ -698,9 +687,9 @@
 }
 </style>
 
-@auth
-  @push('scripts')
-  @vite(['resources/js/book-show.js'])
-  @endpush
-@endauth
+{{-- Loaded for guests too: book-show.js wires the guest download countdown
+     (its like/comment bindings no-op when those elements are absent). --}}
+@push('scripts')
+@vite(['resources/js/book-show.js'])
+@endpush
 @endsection

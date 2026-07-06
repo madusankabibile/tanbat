@@ -86,10 +86,12 @@ Route::prefix('api')->group(function () {
     Route::get('/search/suggest', [SearchController::class, 'suggest']);
     Route::get('/search/results', [SearchController::class, 'results']);
 
-    // Tanbat Assistant book search is public — guests can search the library.
-    // Confirming (which queues a request tied to a user account) stays behind
-    // auth in the middleware group below.
+    // Tanbat Assistant is public end-to-end — guests can search the library and
+    // queue a book request; guest requests are attributed to a shared anonymous
+    // system account (see AssistantController::requestUserId).
     Route::get('/assistant/search', [AssistantController::class, 'search']);
+    Route::post('/assistant/confirm', [AssistantController::class, 'confirm']);
+    Route::get('/assistant/status',   [AssistantController::class, 'status']);
     Route::get('/posts',      [PostController::class, 'index']);
     Route::get('/posts/{post}', [PostController::class, 'show'])->whereNumber('post');
 
@@ -148,9 +150,8 @@ Route::prefix('api')->group(function () {
         Route::post('/messages/threads/{user}/stop-typing',[MessageController::class, 'stopTyping'])->whereNumber('user');
         Route::post('/messages/threads/{user}/read',    [MessageController::class, 'read'])->whereNumber('user');
 
-        // Tanbat Assistant — wizard endpoints (search is public; see above)
-        Route::post('/assistant/confirm', [AssistantController::class, 'confirm']);
-        Route::get('/assistant/status',   [AssistantController::class, 'status']);
+        // Tanbat Assistant — search/confirm/status are all public (see above);
+        // this is the logged-in books grid only.
         Route::get('/books',              [AssistantController::class, 'booksList']);
     });
 });

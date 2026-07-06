@@ -21,12 +21,10 @@
         <h1>Tanbat Library</h1>
         <p>Every book the community has requested through Tanbat Assistant.</p>
       </div>
-      @auth
-        <a href="{{ url('/assistant') }}" class="hero-cta">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Request a book
-        </a>
-      @endauth
+      <a href="{{ url('/assistant') }}" class="hero-cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Request a book
+      </a>
     </header>
 
     @auth
@@ -93,7 +91,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           </div>
           <div class="be-title">No books here yet</div>
-          <div class="be-sub">Check back soon — the library grows as the community requests books.</div>
+          <div class="be-sub">Be the first — request a book through Tanbat Assistant.</div>
+          <a href="{{ url('/assistant') }}" class="be-cta">Request a book</a>
         </div>
       @endif
     @endauth
@@ -107,7 +106,7 @@
 
         <div class="bx-cta">
           <div class="bx-cta-title">Join Tanbat free</div>
-          <p class="bx-cta-sub">Sign in to download books, save your library and request new titles.</p>
+          <p class="bx-cta-sub">Downloading and requesting books is free and open. Create an account to save your library and join the discussion.</p>
           <a href="{{ url('/') }}" class="bx-cta-btn">Create account</a>
           <a href="{{ url('/') }}" class="bx-cta-link">Sign in</a>
         </div>

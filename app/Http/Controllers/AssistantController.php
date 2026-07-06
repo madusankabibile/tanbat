@@ -6,6 +6,7 @@ use App\Http\Controllers\PostController;
 use App\Models\BookDetail;
 use App\Models\PendingBookRequest;
 use App\Models\Post;
+use App\Models\User;
 use App\Models\UserNotification;
 use App\Support\BookSearch;
 use Illuminate\Http\JsonResponse;
@@ -28,13 +29,48 @@ class AssistantController
     /**
      * Page entry point — renders the wizard SPA shell.
      *
-     * Public: guests can run the wizard and search the library. The confirm
-     * step (which queues a request against a user account) still requires
-     * sign-in — the client prompts guests before it fires.
+     * Fully public: guests can run the wizard end-to-end. A guest's confirm is
+     * queued against the shared anonymous system account (see requestUserId).
      */
     public function page()
     {
         return view('assistant');
+    }
+
+    /** Cached id of the shared system account that owns guest-published books. */
+    private static ?int $anonymousUserId = null;
+
+    /**
+     * User id a request is attributed to: the signed-in user, or the shared
+     * "anonymous" system account for guests. All guest-published books collapse
+     * onto this single account so the md5 dedup / pending queue works unchanged.
+     */
+    private function requestUserId(): int
+    {
+        return Auth::id() ?? $this->anonymousUserId();
+    }
+
+    /** Lazily resolve (creating on first use) the shared anonymous account. */
+    private function anonymousUserId(): int
+    {
+        if (self::$anonymousUserId !== null) {
+            return self::$anonymousUserId;
+        }
+
+        $user = User::firstOrCreate(
+            ['username' => 'anonymous'],
+            [
+                'name'     => 'Anonymous',
+                'age'      => 18,
+                'gender'   => 'other',
+                'country'  => 'US',
+                'email'    => 'anonymous@tanbat.local',
+                'password' => bcrypt(Str::random(40)),
+                'role'     => 'user',
+            ]
+        );
+
+        return self::$anonymousUserId = $user->id;
     }
 
     /**
@@ -191,10 +227,8 @@ class AssistantController
      */
     public function confirm(Request $request): JsonResponse
     {
-        if (!Auth::check()) {
-            return response()->json(['ok' => false, 'message' => 'Sign in required.'], 401);
-        }
-
+        // Public: guests may queue a request too — it's attributed to the shared
+        // anonymous system account instead of a personal one.
         $data = $request->validate([
             'service' => 'required|in:book',
             'query'   => 'required|string|min:2|max:200',
@@ -203,7 +237,7 @@ class AssistantController
 
         $query = trim(preg_replace('/\s+/u', ' ', $data['query']));
         $md5   = strtolower($data['md5']);
-        $userId = Auth::id();
+        $userId = $this->requestUserId();
 
         // Fast path: this book already exists in the library. Skip the wait,
         // just notify (if not already notified recently).
@@ -271,14 +305,12 @@ class AssistantController
      */
     public function status(Request $request): JsonResponse
     {
-        if (!Auth::check()) {
-            return response()->json(['ok' => false, 'message' => 'Sign in required.'], 401);
-        }
+        // Public — mirrors confirm(); guests poll against the anonymous account.
         $data = $request->validate([
             'md5' => 'required|string|regex:/^[a-f0-9]{32}$/i',
         ]);
         $md5 = strtolower($data['md5']);
-        $userId = Auth::id();
+        $userId = $this->requestUserId();
 
         // Has the post been created in the meantime?
         $book = BookDetail::with('post.user', 'post.bookDetail')->where('md5', $md5)->first();
@@ -439,6 +471,12 @@ class AssistantController
     /** Fire the book_ready notification (idempotent within the recent window). */
     private function notifyBookReady(int $userId, Post $post): void
     {
+        // Guest requests are owned by the shared anonymous account — nobody polls
+        // its notifications, so there's nothing to deliver.
+        if ($userId === $this->anonymousUserId()) {
+            return;
+        }
+
         $alreadyNotified = UserNotification::where('user_id', $userId)
             ->where('type', 'book_ready')
             ->whereRaw("JSON_EXTRACT(data, '$.post_id') = ?", [$post->id])

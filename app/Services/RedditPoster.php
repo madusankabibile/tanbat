@@ -18,8 +18,8 @@ use RuntimeException;
  *   3. Get an upload lease from /api/media/asset.json.
  *   4. POST the binary to the lease's S3 URL.
  *   5. Submit kind=image to /api/submit with the uploaded asset URL.
- *   6. Post the description + "log in to tanbat.com" CTA as a top-level
- *      comment on the new submission.
+ *   6. Post the description + a direct link to the book's tanbat.com page
+ *      (download open to guests) as a top-level comment on the new submission.
  *
  * All credentials live in config/reddit.php — the heartbeat checks the
  * `enabled` flag before instantiating this service.
@@ -91,10 +91,15 @@ class RedditPoster
         // Reddit caps post titles at 300 chars.
         if (mb_strlen($title) > 300) $title = mb_substr($title, 0, 297) . '…';
 
+        // Public book page — the download button there is open to guests, so
+        // this doubles as the "direct download" link in the Reddit comment.
+        $downloadLink = url('/books/' . $book->slug);
+
         $comment = $this->renderTemplate($this->cfg['comment_template'], [
             '{title}'       => $book->title,
             '{username}'    => $username,
             '{description}' => $book->description ?: '(no description provided)',
+            '{download}'    => $downloadLink,
         ]);
 
         $token = $this->getAccessToken();
