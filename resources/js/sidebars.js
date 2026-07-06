@@ -60,6 +60,10 @@ async function loadSidebar() {
     renderActiveUsers(active_users || []);
   } catch (e) {
     console.warn('Sidebar fetch failed', e);
+    // Don't leave the skeleton loaders spinning forever — drop them to a
+    // graceful empty state if the request failed.
+    const ul = $('#activeUsers');
+    if (ul) ul.innerHTML = `<li class="px-3 py-4 text-center text-xs text-slate-400">Couldn't load active users.</li>`;
   }
 }
 

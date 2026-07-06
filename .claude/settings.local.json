@@ -17,7 +17,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(grep -iA3 \"confirm\\\\|status\")",
       "Bash(php -l config/bots.php)",
-      "Bash(php -l app/Http/Controllers/PageController.php)"
+      "Bash(php -l app/Http/Controllers/PageController.php)",
+      "Bash(grep -rnoE \"\\(DB::raw|whereRaw|orderByRaw|selectRaw|havingRaw\\)\\\\\\([^\\)]*\\\\\\\\\\\\\\\\?\\\\\"[^\\\\\"]+\\\\\\\\\\\\\\\\?\\\\\"[^\\)]*\\\\\\)\" app/)"
     ]
   }
 }

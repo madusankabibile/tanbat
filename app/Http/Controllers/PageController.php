@@ -7,7 +7,6 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class PageController extends Controller
 {
@@ -88,7 +87,11 @@ class PageController extends Controller
             ->withCount(['posts as recent_posts' => fn ($q) => $q->where('created_at', '>=', $recentWindow)])
             ->withCount(['comments as recent_comments' => fn ($q) => $q->where('created_at', '>=', $recentWindow)])
             ->withCount('posts as total_posts')
-            ->orderByDesc(DB::raw('(SELECT COUNT(*) FROM posts WHERE posts.user_id = users.id AND posts.created_at >= "' . $recentWindow->toDateTimeString() . '") + (SELECT COUNT(*) FROM comments WHERE comments.user_id = users.id AND comments.created_at >= "' . $recentWindow->toDateTimeString() . '")'))
+            // Rank by recent activity (posts + comments in the last 24h), then by
+            // lifetime posts. Ordering on the withCount aliases avoids embedding a
+            // raw date literal in SQL — double-quoted literals break on MySQL
+            // servers running in ANSI_QUOTES mode (some managed hosts).
+            ->orderByRaw('(recent_posts + recent_comments) desc')
             ->orderByDesc('total_posts')
             ->limit(6)
             ->get()
