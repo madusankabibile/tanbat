@@ -142,7 +142,12 @@
 /* Sponsored feed card — looks like a regular image post; media is a display ad. */
 .ad-feed-card .ad-feed-av { display: grid; place-items: center; background: linear-gradient(135deg,#6C63FF,#A78BFA); color: #fff; }
 .ad-feed-card .ad-feed-av svg { width: 20px; height: 20px; }
-.ad-feed-card .adbot-slot { min-height: 250px; display: flex; justify-content: center; align-items: center; background: #F8FAFC; }
+/* The ad fills the whole media area like an image post — full card width, not a
+   small centered box. Force the network's iframe/image children to 100% width. */
+.ad-feed-card .adbot-slot { width: 100%; min-height: 250px; background: #F8FAFC; overflow: hidden; }
+.ad-feed-card .adbot-slot > div { width: 100%; }
+.ad-feed-card .adbot-slot iframe { display: block; width: 100% !important; min-height: 250px; border: 0; }
+.ad-feed-card .adbot-slot img { display: block; width: 100%; height: auto; }
 
 .post-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
 .post-head .avatar {

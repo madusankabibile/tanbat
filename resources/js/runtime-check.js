@@ -59,7 +59,9 @@
       probe.onload  = () => done(false);
       probe.onerror = () => done(true);
       document.head.appendChild(probe);
-      setTimeout(() => done(true), timeoutMs);
+      // Timeout is inconclusive, not proof of blocking — a slow network or a
+      // busy ad server shouldn't get a legitimate visitor locked out.
+      setTimeout(() => done(false), timeoutMs);
     });
   }
 
@@ -81,15 +83,19 @@
   }
 
   async function detect() {
-    // OR logic — any single signal is enough. We run them concurrently so the
-    // total detection budget is the slowest probe, not the sum.
-    const [bait, scriptGoog, scriptDouble, fetchAds] = await Promise.all([
+    // Run every probe concurrently so the detection budget is the slowest one,
+    // not the sum.
+    const signals = await Promise.all([
       baitBlocked(),
       networkBlocked('https://pagead2.googlesyndication.com/pagead/show_ads.js'),
       networkBlocked('https://securepubads.g.doubleclick.net/tag/js/gpt.js'),
       fetchBlocked('https://static.doubleclick.net/instream/ad_status.js'),
     ]);
-    return bait || scriptGoog || scriptDouble || fetchAds;
+    // Require agreement from at least TWO independent signals before locking the
+    // page. A single positive is too aggressive — a privacy browser quirk, a
+    // flaky probe or a cosmetic-only extension can trip one on its own. A real
+    // ad-blocker trips three or four of these at once.
+    return signals.filter(Boolean).length >= 2;
   }
 
   // ─────────── Modal ───────────
@@ -147,9 +153,16 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run);
+  // Only run after the page has fully loaded, plus a short grace period so our
+  // own ad slots and probes have a chance to settle first. Running during the
+  // initial paint raced real ad-network requests and produced false positives.
+  const GRACE_MS = 2000;
+  function boot() {
+    setTimeout(run, GRACE_MS);
+  }
+  if (document.readyState === 'complete') {
+    boot();
   } else {
-    run();
+    window.addEventListener('load', boot, { once: true });
   }
 })();
