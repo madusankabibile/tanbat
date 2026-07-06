@@ -81,6 +81,9 @@ class PageController extends Controller
         $recentWindow = now()->subDay();
         $onlineWindow = now()->subMinutes(5);
         $activeUsers = User::query()
+            // Hide automated content bots + the shared anonymous account so the
+            // rail surfaces real members (see config/bots.php).
+            ->whereNotIn('username', config('bots.usernames', []))
             ->select('id', 'name', 'username', 'profile_picture', 'updated_at')
             ->withCount(['posts as recent_posts' => fn ($q) => $q->where('created_at', '>=', $recentWindow)])
             ->withCount(['comments as recent_comments' => fn ($q) => $q->where('created_at', '>=', $recentWindow)])

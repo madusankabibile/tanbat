@@ -15,7 +15,9 @@
       "Bash(php -l app/Http/Controllers/AssistantController.php)",
       "Bash(php -l routes/web.php)",
       "Bash(echo \"exit: $?\")",
-      "Bash(grep -iA3 \"confirm\\\\|status\")"
+      "Bash(grep -iA3 \"confirm\\\\|status\")",
+      "Bash(php -l config/bots.php)",
+      "Bash(php -l app/Http/Controllers/PageController.php)"
     ]
   }
 }
