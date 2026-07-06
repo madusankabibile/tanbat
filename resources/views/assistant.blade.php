@@ -8,11 +8,17 @@
   @include('partials.guest-bar')
 @endauth
 
-<div class="assistant-shell {{ auth()->check() ? '' : 'assistant-shell--guest' }} mx-auto w-full max-w-[1480px] px-3 py-5 sm:px-5 lg:px-6">
+<div class="assistant-shell mx-auto w-full max-w-[1480px] px-3 py-5 sm:px-5 lg:px-6">
 
-  @auth
-    @include('partials.side-rails')
-  @endauth
+  {{-- ─────────── LEFT AD RAIL ─────────── --}}
+  <aside class="assist-rail assist-rail--left">
+    <div class="assist-rail-sticky">
+      <section class="assist-ad">
+        <span class="assist-ad-tag">Sponsored</span>
+        @include('partials.ad-banner')
+      </section>
+    </div>
+  </aside>
 
   <main class="assistant-main">
 
@@ -184,6 +190,17 @@
     </section>
 
   </main>
+
+  {{-- ─────────── RIGHT AD RAIL ─────────── --}}
+  <aside class="assist-rail assist-rail--right">
+    <div class="assist-rail-sticky">
+      <section class="assist-ad">
+        <span class="assist-ad-tag">Sponsored</span>
+        @include('partials.ad-banner')
+      </section>
+      @include('partials.stat-counter')
+    </div>
+  </aside>
 </div>
 
 @auth
@@ -194,18 +211,40 @@
 <style>
 .assistant-shell { display: grid; grid-template-columns: 1fr; gap: 20px; }
 .assistant-main  { min-width: 0; grid-column: 1; grid-row: 1; max-width: 760px; margin: 0 auto; width: 100%; }
+
+/* Left + right sponsored ad rails, shown to every visitor. Hidden on narrow
+   screens where there's no room; revealed as the viewport widens (left at lg,
+   right at xl) so the wizard column never gets squeezed. */
+.assist-rail { display: none; min-width: 0; }
+.assist-rail-sticky {
+  position: sticky; top: 88px;
+  display: flex; flex-direction: column; gap: 16px;
+  max-height: calc(100vh - 88px - 20px);
+  overflow-y: auto; scrollbar-width: none;
+}
+.assist-rail-sticky::-webkit-scrollbar { display: none; }
+.assist-ad {
+  position: relative;
+  background: #fff; border: 1px solid #E5E7EB; border-radius: 14px;
+  padding: 12px; box-shadow: 0 1px 2px rgba(20,20,50,.04);
+}
+.assist-ad-tag {
+  position: absolute; top: 10px; left: 14px; z-index: 2;
+  font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: #94A3B8; background: rgba(255,255,255,.85);
+  padding: 2px 6px; border-radius: 4px;
+}
+.assist-ad .ad-banner { min-height: 250px; }
+
 @media (min-width: 1024px) {
-  .assistant-shell { grid-template-columns: 280px minmax(0, 1fr); }
-  .assistant-main  { grid-column: 2; grid-row: 1; }
+  .assistant-shell { grid-template-columns: 300px minmax(0, 1fr); }
+  .assist-rail--left { display: block; grid-column: 1; grid-row: 1; }
+  .assistant-main    { grid-column: 2; grid-row: 1; }
 }
 @media (min-width: 1280px) {
-  .assistant-shell { grid-template-columns: 280px minmax(0, 1fr) 320px; }
+  .assistant-shell { grid-template-columns: 300px minmax(0, 1fr) 320px; }
+  .assist-rail--right { display: block; grid-column: 3; grid-row: 1; }
 }
-
-/* Guests have no side rails — collapse to a single centered column at every
-   breakpoint so the wizard doesn't leave an empty rail gutter. */
-.assistant-shell--guest { grid-template-columns: 1fr !important; }
-.assistant-shell--guest .assistant-main { grid-column: 1 !important; }
 
 .assist-hero {
   display: flex; align-items: center; gap: 16px;

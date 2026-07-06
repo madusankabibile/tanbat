@@ -139,6 +139,20 @@
 }
 .post-card:hover { box-shadow: 0 4px 12px rgba(20,20,50,.06); }
 
+/* Sponsored feed card — looks like a regular post; body is a display ad. */
+.ad-feed-card .ad-feed-av { display: grid; place-items: center; background: linear-gradient(135deg,#6C63FF,#A78BFA); color: #fff; }
+.ad-feed-card .ad-feed-av svg { width: 20px; height: 20px; }
+.ad-feed-card .ad-feed-out { margin-left: auto; color: #94A3B8; padding: 6px; border-radius: 8px; display: inline-grid; place-items: center; }
+.ad-feed-card .ad-feed-out:hover { background: #F1F5F9; color: #5A52D5; }
+.ad-feed-card .adbot-slot { min-height: 250px; display: flex; justify-content: center; align-items: center; background: #F8FAFC; }
+.ad-feed-card .ad-feed-cta {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: 10px 12px 12px; padding: 10px; border-radius: 10px;
+  background: #F5F3FF; color: #5A52D5; font-size: 13px; font-weight: 700;
+  transition: background .15s;
+}
+.ad-feed-card .ad-feed-cta:hover { background: #EDE9FE; }
+
 .post-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
 .post-head .avatar {
   height: 40px; width: 40px; border-radius: 9999px; object-fit: cover; flex-shrink: 0;

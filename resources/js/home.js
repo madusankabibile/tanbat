@@ -1,5 +1,5 @@
 // Home-page logic: feed, create-modals, post-detail modal
-import { cardHTML, bindGallery, isLight, mountVideoStage, newsbotCtaHTML, hydrateAdSlots, formatPostTime,
+import { cardHTML, bindGallery, isLight, mountVideoStage, newsbotCtaHTML, hydrateAdSlots, feedAdCardHTML, formatPostTime,
          REACTIONS, REACTION_MAP, reactionStackHTML, applyReactionUI, setReactionCount, renderReactionSummary, bindReactions, dismissReactionPanel,
          bindDownloadCountdown } from './cards.js';
 
@@ -134,10 +134,20 @@ function renderFeed({ append = false } = {}) {
     feed.innerHTML = posts.map(cardHTML).join('');
   }
 
+  ensureFeedAd();
   feed.querySelectorAll('.gallery-wrap').forEach(bindGallery);
   hydrateAdSlots(feed);
   bindDownloadCountdown(feed);
   observeImpressions();
+}
+
+// Pin a single sponsored card to the very top of the feed. It's inserted once
+// (a full re-render on filter change wipes it, so we re-add), never duplicated
+// on append, and carries no data-post-id so it's ignored by impression tracking.
+function ensureFeedAd() {
+  const feed = $('#feed');
+  if (!feed || feed.querySelector('[data-ad-feed]')) return;
+  feed.insertAdjacentHTML('afterbegin', feedAdCardHTML());
 }
 
 // Pick the right copy depending on whether the user has *ever* seen content.
