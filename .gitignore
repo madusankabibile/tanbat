@@ -1,6 +1,10 @@
 /.phpunit.cache
 /node_modules
-/public/build
+# NOTE: /public/build is intentionally committed. The cPanel host deploys with
+# a plain `cp -R *` and has no Node/`npm run build` step, so the compiled Vite
+# assets (manifest.json + assets/) must ship in the repo or the live site runs
+# stale JS/CSS. Rebuild (`npm run build`) and commit public/build whenever you
+# change anything under resources/js or resources/css.
 /public/hot
 /public/storage
 /storage/*.key

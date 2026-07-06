@@ -1,0 +1,109 @@
+{
+  "_banners-C6x9FQL1.js": {
+    "file": "assets/banners-C6x9FQL1.js",
+    "name": "banners"
+  },
+  "_cards-BeQaSmFw.js": {
+    "file": "assets/cards-BeQaSmFw.js",
+    "name": "cards"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-CdhMUOzH.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-dCLyqD7P.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/article-create.js": {
+    "file": "assets/article-create-DWO7zsIu.js",
+    "name": "article-create",
+    "src": "resources/js/article-create.js",
+    "isEntry": true
+  },
+  "resources/js/assistant.js": {
+    "file": "assets/assistant-3EGLfl3B.js",
+    "name": "assistant",
+    "src": "resources/js/assistant.js",
+    "isEntry": true,
+    "imports": [
+      "_cards-BeQaSmFw.js"
+    ]
+  },
+  "resources/js/book-show.js": {
+    "file": "assets/book-show-BJxSgcBD.js",
+    "name": "book-show",
+    "src": "resources/js/book-show.js",
+    "isEntry": true,
+    "imports": [
+      "_cards-BeQaSmFw.js"
+    ]
+  },
+  "resources/js/books.js": {
+    "file": "assets/books-DPCPFEGK.js",
+    "name": "books",
+    "src": "resources/js/books.js",
+    "isEntry": true
+  },
+  "resources/js/home.js": {
+    "file": "assets/home-B36qjvdP.js",
+    "name": "home",
+    "src": "resources/js/home.js",
+    "isEntry": true,
+    "imports": [
+      "_cards-BeQaSmFw.js"
+    ]
+  },
+  "resources/js/messenger.js": {
+    "file": "assets/messenger-C8kBQPHM.js",
+    "name": "messenger",
+    "src": "resources/js/messenger.js",
+    "isEntry": true
+  },
+  "resources/js/people.js": {
+    "file": "assets/people-CWdJ7oP4.js",
+    "name": "people",
+    "src": "resources/js/people.js",
+    "isEntry": true,
+    "imports": [
+      "_banners-C6x9FQL1.js"
+    ]
+  },
+  "resources/js/profile.js": {
+    "file": "assets/profile-DpYWbytG.js",
+    "name": "profile",
+    "src": "resources/js/profile.js",
+    "isEntry": true,
+    "imports": [
+      "_cards-BeQaSmFw.js",
+      "_banners-C6x9FQL1.js"
+    ]
+  },
+  "resources/js/runtime-check.js": {
+    "file": "assets/runtime-check-C30VDVlw.js",
+    "name": "runtime-check",
+    "src": "resources/js/runtime-check.js",
+    "isEntry": true
+  },
+  "resources/js/search.js": {
+    "file": "assets/search-Dce4FXLE.js",
+    "name": "search",
+    "src": "resources/js/search.js",
+    "isEntry": true
+  },
+  "resources/js/share-module.js": {
+    "file": "assets/share-module-B-axh4I6.js",
+    "name": "share-module",
+    "src": "resources/js/share-module.js",
+    "isEntry": true
+  },
+  "resources/js/sidebars.js": {
+    "file": "assets/sidebars-CGxRAG_G.js",
+    "name": "sidebars",
+    "src": "resources/js/sidebars.js",
+    "isEntry": true
+  }
+}
