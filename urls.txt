@@ -1,0 +1,22 @@
+Category A
+https://z-library.sk/s/sample%20book
+https://1lib.sk/s/sample%20book
+https://z-lib.fm/s/sample%20book
+https://z-lib.gd/s/sample%20book
+https://z-lib.gl/s/sample%20book
+https://zlib.li/s/sample%20book
+https://z-library.ec/s/sample%20book
+
+
+Category B
+https://annas-archive.gl/search?q=sample+book
+https://annas-archive.pk/search?q=sample+book
+https://annas-archive.gd/search?q=sample+book
+
+
+Category C
+https://libgen.li/index.php?req=sample+book
+https://libgen.bz/index.php?req=sample+book
+https://libgen.la/index.php?req=sample+book
+https://libgen.vg/index.php?req=sample+book
+

@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Disallow sensitive or dynamic areas
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /messages/
+Disallow: /search
+Disallow: /tasks/
+
+# Optional: You can link to your sitemap here if you generate one
+# Sitemap: https://tanbat.com/sitemap.xml

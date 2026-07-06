@@ -1,0 +1,220 @@
+<?php
+
+use App\Http\Controllers\Admin\AdvertisementController as AdminAdvertisementController;
+use App\Http\Controllers\Admin\BookController as AdminBookController;
+use App\Http\Controllers\Admin\BookSearchController as AdminBookSearchController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\PinterestController as AdminPinterestController;
+use App\Http\Controllers\Admin\PostController as AdminPostController;
+use App\Http\Controllers\Admin\RedditController as AdminRedditController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\ArticleFeedController;
+use App\Http\Controllers\AssistantController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BookFeedController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\FeedController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\PeopleController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\SaveCategoryController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\TaskRunnerController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserFeedController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Pages
+|--------------------------------------------------------------------------
+*/
+// Soft bot scheduler — pinged by the layout's JS heartbeat from logged-in
+// browsers. See App\Http\Controllers\TaskRunnerController.
+Route::get('/tasks/run', [TaskRunnerController::class, 'run']);
+
+Route::get('/',                  [PageController::class, 'landing'])->name('landing');
+Route::get('/home',              [PageController::class, 'home'])->name('home');
+Route::get('/privacy',           [PageController::class, 'privacy'])->name('privacy');
+Route::get('/articles/feed.xml', [ArticleFeedController::class, 'rss'])->name('articles.feed');
+Route::get('/articles/create',   [PageController::class, 'articleCreate'])->name('articles.create');
+Route::get('/articles/{slug}',   [PageController::class, 'articleShow'])->name('articles.show');
+Route::get('/u/{username}',      [UserController::class, 'show'])->name('profile');
+Route::get('/messages',          [MessageController::class, 'index'])->name('messages.index');
+// Legacy "Message BabyBoss" deep links — the persona is retired; send them
+// to the Tanbat Assistant wizard instead.
+Route::redirect('/messages/1',   '/assistant');
+Route::get('/messages/{user}',   [MessageController::class, 'show'])->whereNumber('user')->name('messages.show');
+
+/* Vanity-URL redirects → canonical profile paths */
+Route::redirect('/chinmoy9722',  '/u/chinmoy9722');
+Route::redirect('/boss',         '/assistant');
+Route::get('/search',            [SearchController::class, 'page'])->name('search');
+Route::get('/discover/people',   [PeopleController::class, 'page'])->name('people');
+Route::get('/users/feed.xml',    [UserFeedController::class, 'rss'])->name('users.feed');
+Route::get('/assistant',         [AssistantController::class, 'page'])->name('assistant');
+Route::get('/books',             [AssistantController::class, 'booksPage'])->name('books');
+// Public RSS feed of latest books — Pinterest auto-publish source. Declared
+// BEFORE the {slug} route so "feed.xml" isn't swallowed as a book slug.
+Route::get('/books/feed.xml',    [BookFeedController::class, 'rss'])->name('books.feed');
+Route::get('/books/{slug}',      [AssistantController::class, 'show'])->name('books.show');
+
+/*
+|--------------------------------------------------------------------------
+| Auth (session-based, CSRF-protected JSON endpoints)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('auth')->name('auth.')->group(function () {
+    Route::post('/login',    [AuthController::class, 'login'])->name('login');
+    Route::post('/register', [AuthController::class, 'register'])->name('register');
+    Route::post('/logout',   [AuthController::class, 'logout'])->name('logout');
+    Route::get('/user',      [AuthController::class, 'user'])->name('user');
+});
+
+/*
+|--------------------------------------------------------------------------
+| API for the SPA (session-auth + CSRF)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('api')->group(function () {
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/sidebar',    [PageController::class, 'sidebar']);
+    Route::get('/search/suggest', [SearchController::class, 'suggest']);
+    Route::get('/search/results', [SearchController::class, 'results']);
+    Route::get('/posts',      [PostController::class, 'index']);
+    Route::get('/posts/{post}', [PostController::class, 'show'])->whereNumber('post');
+
+    // Personalized feed + interaction logging
+    Route::get('/feed',                     [FeedController::class, 'index']);
+    Route::post('/feed/impressions',        [FeedController::class, 'impressions']);
+    Route::post('/posts/{post}/click',      [FeedController::class, 'click']);
+
+    Route::get('/users/{user}',         [UserController::class, 'profile']);
+    Route::get('/users/{user}/posts',   [UserController::class, 'posts']);
+
+    Route::middleware('auth')->group(function () {
+        Route::get('/people/summary',  [PeopleController::class, 'summary']);
+        Route::get('/people/filters',  [PeopleController::class, 'filters']);
+        Route::get('/people/{section}', [PeopleController::class, 'list'])
+            ->whereIn('section', ['following', 'followers', 'visitors', 'discover']);
+
+        Route::post('/posts/status',  [PostController::class, 'storeStatus']);
+        Route::post('/posts/image',   [PostController::class, 'storeImage']);
+        Route::post('/posts/video',   [PostController::class, 'storeVideo']);
+        Route::post('/posts/article', [PostController::class, 'storeArticle']);
+        Route::post('/posts/inline-image', [PostController::class, 'uploadInlineImage']);
+        Route::get('/posts/saved',     [PostController::class, 'saved']);
+        Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+
+        // Personal "save folders" used to organize bookmarked posts.
+        Route::get('/save-categories',                [SaveCategoryController::class, 'index']);
+        Route::post('/save-categories',               [SaveCategoryController::class, 'store']);
+        Route::patch('/save-categories/{category}',   [SaveCategoryController::class, 'update']);
+        Route::delete('/save-categories/{category}',  [SaveCategoryController::class, 'destroy']);
+        Route::patch('/posts/{post}',  [PostController::class, 'update']);
+
+        Route::post('/posts/{post}/like',     [PostController::class, 'toggleLike']);
+        Route::post('/posts/{post}/share',    [PostController::class, 'recordShare']);
+        Route::post('/posts/{post}/save',     [PostController::class, 'toggleSave']);
+        Route::post('/posts/{post}/hide',     [PostController::class, 'hide']);
+
+        Route::post('/users/{user}/follow',   [UserController::class, 'toggleFollow']);
+        Route::patch('/users/{user}',         [UserController::class, 'update']);
+        Route::post('/users/{user}/avatar',   [UserController::class, 'updateAvatar']);
+        Route::post('/users/{user}/banner',   [UserController::class, 'updateBanner']);
+
+        Route::get('/notifications',          [NotificationController::class, 'index']);
+        Route::post('/notifications/read',    [NotificationController::class, 'markRead']);
+
+        Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
+        Route::delete('/comments/{comment}',  [CommentController::class, 'destroy']);
+
+        // Messaging
+        Route::get('/messages/unread-count',            [MessageController::class, 'unreadCount']);
+        Route::get('/messages/threads',                 [MessageController::class, 'threads']);
+        Route::get('/messages/threads/{user}',          [MessageController::class, 'thread'])->whereNumber('user');
+        Route::post('/messages/threads/{user}',         [MessageController::class, 'send'])->whereNumber('user');
+        Route::get('/messages/threads/{user}/poll',     [MessageController::class, 'poll'])->whereNumber('user');
+        Route::post('/messages/threads/{user}/typing',     [MessageController::class, 'typing'])->whereNumber('user');
+        Route::post('/messages/threads/{user}/stop-typing',[MessageController::class, 'stopTyping'])->whereNumber('user');
+        Route::post('/messages/threads/{user}/read',    [MessageController::class, 'read'])->whereNumber('user');
+
+        // Tanbat Assistant — wizard endpoints
+        Route::get('/assistant/search',   [AssistantController::class, 'search']);
+        Route::post('/assistant/confirm', [AssistantController::class, 'confirm']);
+        Route::get('/assistant/status',   [AssistantController::class, 'status']);
+        Route::get('/books',              [AssistantController::class, 'booksList']);
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin panel (session auth + admin role)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    // Users
+    Route::get('users',                [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('users/{user}/edit',    [AdminUserController::class, 'edit'])->name('users.edit');
+    Route::put('users/{user}',         [AdminUserController::class, 'update'])->name('users.update');
+    Route::delete('users/{user}',      [AdminUserController::class, 'destroy'])->name('users.destroy');
+
+    // Posts
+    Route::get('posts',                [AdminPostController::class, 'index'])->name('posts.index');
+    Route::get('posts/{post}',         [AdminPostController::class, 'show'])->name('posts.show');
+    Route::get('posts/{post}/edit',    [AdminPostController::class, 'edit'])->name('posts.edit');
+    Route::put('posts/{post}',         [AdminPostController::class, 'update'])->name('posts.update');
+    Route::delete('posts/{post}',      [AdminPostController::class, 'destroy'])->name('posts.destroy');
+
+    // Books (book-type posts + Reddit cross-post controls)
+    Route::get('books',                [AdminBookController::class, 'index'])->name('books.index');
+    Route::post('books/{book}/repost', [AdminBookController::class, 'repost'])->name('books.repost');
+    Route::post('books/{book}/repost-pinterest', [AdminBookController::class, 'repostPinterest'])->name('books.repost-pinterest');
+    Route::delete('books/{book}',      [AdminBookController::class, 'destroy'])->name('books.destroy');
+
+    // Categories
+    Route::get('categories',           [AdminCategoryController::class, 'index'])->name('categories.index');
+    Route::post('categories',          [AdminCategoryController::class, 'store'])->name('categories.store');
+    Route::put('categories/{category}',[AdminCategoryController::class, 'update'])->name('categories.update');
+    Route::delete('categories/{category}', [AdminCategoryController::class, 'destroy'])->name('categories.destroy');
+
+    // Book search engine (Anna's Archive / Z-Library) + domain config
+    Route::get('book-search',          [AdminBookSearchController::class, 'index'])->name('book-search.index');
+    Route::put('book-search',          [AdminBookSearchController::class, 'update'])->name('book-search.update');
+
+    // Reddit cross-poster OAuth
+    Route::get('reddit',               [AdminRedditController::class, 'index'])->name('reddit.index');
+    Route::post('reddit/connect',      [AdminRedditController::class, 'connect'])->name('reddit.connect');
+    Route::get('reddit/callback',      [AdminRedditController::class, 'callback'])->name('reddit.callback');
+    Route::post('reddit/disconnect',   [AdminRedditController::class, 'disconnect'])->name('reddit.disconnect');
+
+    // Pinterest cross-poster OAuth + board selection
+    Route::get('pinterest',             [AdminPinterestController::class, 'index'])->name('pinterest.index');
+    Route::post('pinterest/connect',    [AdminPinterestController::class, 'connect'])->name('pinterest.connect');
+    Route::get('pinterest/callback',    [AdminPinterestController::class, 'callback'])->name('pinterest.callback');
+    Route::post('pinterest/board',      [AdminPinterestController::class, 'board'])->name('pinterest.board');
+    Route::post('pinterest/token',      [AdminPinterestController::class, 'token'])->name('pinterest.token');
+    Route::post('pinterest/disconnect', [AdminPinterestController::class, 'disconnect'])->name('pinterest.disconnect');
+
+    // Advertisements
+    Route::get('ads',                  [AdminAdvertisementController::class, 'index'])->name('ads.index');
+    Route::get('ads/create',           [AdminAdvertisementController::class, 'create'])->name('ads.create');
+    Route::post('ads',                 [AdminAdvertisementController::class, 'store'])->name('ads.store');
+    Route::get('ads/{ad}/edit',        [AdminAdvertisementController::class, 'edit'])->name('ads.edit');
+    Route::put('ads/{ad}',             [AdminAdvertisementController::class, 'update'])->name('ads.update');
+    Route::post('ads/{ad}/toggle',     [AdminAdvertisementController::class, 'toggle'])->name('ads.toggle');
+    Route::delete('ads/{ad}',          [AdminAdvertisementController::class, 'destroy'])->name('ads.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Fallback — show landing for any other route
+|--------------------------------------------------------------------------
+*/
+Route::fallback([PageController::class, 'landing']);

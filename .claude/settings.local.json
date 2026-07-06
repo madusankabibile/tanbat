@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(grep -rln 'post->body\\\\|$post->body\\\\|post.body' resources/views)",
+      "Bash(mysql *)",
+      "Bash(grep -n -B3 -A15 'Advertisement\\\\|pickFor\\\\|$ad' resources/views/partials/side-rails.blade.php)",
+      "Bash(zip -r backup.zip . -x storage/app/public/* -x storage/framework/cache/* -x storage/framework/sessions/* -x storage/framework/views/* -x .well-known.zip -x backup.zip -q)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(unzip -l /home/tanbjmba/public_html_backup_20260706.zip)",
+      "Bash(awk '{print $4}')",
+      "Bash(rm /home/tanbjmba/public_html_backup_20260706.zip)",
+      "Bash(zip -rq -y /home/tanbjmba/public_html_backup_20260706.zip . -x storage/app/public/* -x public/storage/* -x storage/framework/cache/* -x storage/framework/views/* -x storage/framework/sessions/* -x storage/framework/testing/* -x bootstrap/cache/*.php)"
+    ]
+  }
+}
