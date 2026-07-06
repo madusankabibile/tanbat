@@ -25,12 +25,15 @@ use Illuminate\Support\Str;
  */
 class AssistantController
 {
-    /** Page entry point — renders the wizard SPA shell. */
+    /**
+     * Page entry point — renders the wizard SPA shell.
+     *
+     * Public: guests can run the wizard and search the library. The confirm
+     * step (which queues a request against a user account) still requires
+     * sign-in — the client prompts guests before it fires.
+     */
     public function page()
     {
-        if (!Auth::check()) {
-            return redirect()->route('landing');
-        }
         return view('assistant');
     }
 
@@ -140,10 +143,7 @@ class AssistantController
      */
     public function search(Request $request): JsonResponse
     {
-        if (!Auth::check()) {
-            return response()->json(['ok' => false, 'message' => 'Sign in required.'], 401);
-        }
-
+        // Public — guests may search the library without signing in.
         $data = $request->validate([
             'service' => 'required|in:book,software,game,movie',
             'query'   => 'required|string|min:2|max:200',

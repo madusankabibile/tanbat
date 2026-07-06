@@ -2,11 +2,17 @@
 @section('title', 'Tanbat Assistant')
 
 @section('content')
-@include('partials.navbar')
+@auth
+  @include('partials.navbar')
+@else
+  @include('partials.guest-bar')
+@endauth
 
-<div class="assistant-shell mx-auto w-full max-w-[1480px] px-3 py-5 sm:px-5 lg:px-6">
+<div class="assistant-shell {{ auth()->check() ? '' : 'assistant-shell--guest' }} mx-auto w-full max-w-[1480px] px-3 py-5 sm:px-5 lg:px-6">
 
-  @include('partials.side-rails')
+  @auth
+    @include('partials.side-rails')
+  @endauth
 
   <main class="assistant-main">
 
@@ -177,7 +183,9 @@
   </main>
 </div>
 
-@include('partials.user-sheet')
+@auth
+  @include('partials.user-sheet')
+@endauth
 @include('partials.share-modal')
 
 <style>
@@ -190,6 +198,11 @@
 @media (min-width: 1280px) {
   .assistant-shell { grid-template-columns: 280px minmax(0, 1fr) 320px; }
 }
+
+/* Guests have no side rails — collapse to a single centered column at every
+   breakpoint so the wizard doesn't leave an empty rail gutter. */
+.assistant-shell--guest { grid-template-columns: 1fr !important; }
+.assistant-shell--guest .assistant-main { grid-column: 1 !important; }
 
 .assist-hero {
   display: flex; align-items: center; gap: 16px;

@@ -246,6 +246,13 @@ async function confirmCurrent() {
     toast('That result is missing an identifier — try the next one.', 'bad');
     return;
   }
+  // Guests can search and browse results, but requesting a book queues it
+  // against a user account — send them to sign in first.
+  if (!APP.user) {
+    toast('Sign in to request this book.', 'bad');
+    setTimeout(() => { window.location.href = APP.urls.landing; }, 1200);
+    return;
+  }
   state.confirming = true;
   const yesBtn = $('#btnYesMine');
   const noBtn  = $('#btnNotMine');
