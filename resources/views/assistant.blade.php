@@ -100,21 +100,24 @@
       </form>
     </section>
 
-    {{-- ───── STEP 3: Results review (one card at a time) ───── --}}
+    {{-- ───── STEP 3: Results (10 per page, pick one) ───── --}}
     <section class="assist-panel hidden" data-pane="results">
       <div class="results-head">
-        <h2 class="assist-h2">Is this the book you're looking for?</h2>
+        <h2 class="assist-h2">Pick your book</h2>
         <p class="assist-sub" id="resultsCounter"></p>
       </div>
 
-      <div class="result-card" id="resultCard">
+      <div class="results-list" id="resultsList">
         {{-- populated by JS --}}
       </div>
 
-      <div class="result-actions">
+      <div class="results-nav" id="resultsNav">
         <button type="button" class="btn-ghost" data-back>← Back</button>
-        <button type="button" class="btn-secondary" id="btnNotMine">No, show next</button>
-        <button type="button" class="btn-primary" id="btnYesMine">Yes, that's it</button>
+        <div class="results-pager" id="resultsPager">
+          <button type="button" class="btn-secondary" id="btnPrevPage">← Prev</button>
+          <span class="page-indicator" id="pageIndicator"></span>
+          <button type="button" class="btn-secondary" id="btnNextPage">Next →</button>
+        </div>
       </div>
 
       <div class="results-empty hidden" id="resultsEmpty">
@@ -358,31 +361,36 @@
   animation: ldr .7s linear infinite;
 }
 
-/* Results */
+/* Results — paginated list, 10 per page */
 .results-head { margin-bottom: 16px; }
-.result-card {
-  display: grid; grid-template-columns: 140px 1fr; gap: 18px;
-  padding: 18px;
-  border: 1px solid #E5E7EB; border-radius: 14px;
-  background: linear-gradient(135deg,#F8FAFC 0%, #FFFFFF 100%);
+.results-list { display: flex; flex-direction: column; gap: 10px; }
+.result-item {
+  display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center;
+  padding: 12px; cursor: pointer;
+  border: 1px solid #E5E7EB; border-radius: 12px; background: #fff;
+  transition: border-color .15s, box-shadow .15s, transform .12s;
 }
-.result-cover {
-  width: 140px; aspect-ratio: 2 / 3;
-  border-radius: 10px; overflow: hidden;
-  background: #EEF2FF;
-  display: grid; place-items: center;
-  border: 1px solid #E5E7EB;
+.result-item:hover { border-color: #C5C9FF; box-shadow: 0 6px 18px rgba(108,99,255,.12); transform: translateY(-1px); }
+.ri-cover {
+  width: 64px; aspect-ratio: 2 / 3; flex-shrink: 0;
+  border-radius: 8px; overflow: hidden; background: #EEF2FF;
+  display: grid; place-items: center; border: 1px solid #E5E7EB;
 }
-.result-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.result-cover .noimg { color: #94A3B8; font-size: 11px; padding: 8px; text-align: center; }
-.result-info { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.result-title { font-size: 17px; font-weight: 800; color: #1E1B4B; line-height: 1.25; word-break: break-word; }
-.result-author { font-size: 13px; color: #475569; }
-.result-pub { font-size: 12px; color: #6B7280; }
-.result-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ri-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ri-cover .noimg { color: #94A3B8; font-size: 9px; padding: 4px; text-align: center; }
+.ri-info { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ri-title {
+  font-size: 14.5px; font-weight: 800; color: #1E1B4B; line-height: 1.25; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ri-author { font-size: 12px; color: #475569; }
+.ri-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.ri-action { flex-shrink: 0; }
+.ri-select { white-space: nowrap; padding: 8px 16px; font-size: 13px; }
+
 .result-tag {
-  font-size: 10.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
-  padding: 3px 8px; border-radius: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 6px;
   background: #EEF2FF; color: #4338CA;
 }
 .result-tag.lang { background: #FEF3C7; color: #92400E; }
@@ -390,8 +398,10 @@
 .result-tag.year { background: #FCE7F3; color: #9D174D; }
 .result-tag.ext  { background: #DBEAFE; color: #1D4ED8; }
 
-.result-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-.result-actions > *:first-child { margin-right: auto; }
+.results-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.results-pager { display: flex; align-items: center; gap: 8px; }
+.results-pager.hidden { display: none !important; }
+.page-indicator { font-size: 12.5px; font-weight: 700; color: #64748B; min-width: 92px; text-align: center; }
 
 .results-empty {
   text-align: center; padding: 32px 16px;
@@ -487,12 +497,19 @@
 .done-actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
 
 @media (max-width: 540px) {
-  .result-card { grid-template-columns: 1fr; }
-  .result-cover { width: 120px; margin: 0 auto; }
+  .result-item {
+    grid-template-columns: 56px 1fr;
+    grid-template-areas: "cover info" "action action";
+    row-gap: 10px;
+  }
+  .ri-cover { grid-area: cover; }
+  .ri-info { grid-area: info; }
+  .ri-action { grid-area: action; }
+  .ri-select { width: 100%; }
   .done-card { grid-template-columns: 1fr; }
   .done-card .dc-cover { width: 120px; margin: 0 auto; }
-  .result-actions { justify-content: stretch; }
-  .result-actions > * { flex: 1; }
+  .results-nav { justify-content: stretch; }
+  .results-pager { flex: 1; justify-content: space-between; }
   .done-actions > * { flex: 1; }
 }
 

@@ -51,9 +51,8 @@ return [
     'title_template' => '{title} published on the Tanbat.com as requested by the {username}',
 
     // Body for the auto-comment. {description} → scraped book description.
-    // {title} → book title. {download} → direct link to the book's page on
-    // tanbat.com, where the download button is open to guests (no login).
+    // {title} → book title (used so the search query is exact).
     'comment_template' =>
         "{description}\n\n" .
-        "📚 Download **\"{title}\"** here: {download}",
+        "📚 To find your book, go to **tanbat.com/books** and search **\"{title}\"**.",
 ];

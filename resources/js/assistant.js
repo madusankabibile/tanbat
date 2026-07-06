@@ -23,55 +23,27 @@ const state = {
   service: null,       // 'book' | 'software' | 'game' | 'movie'
   query: '',
   results: [],
-  cursor: 0,
+  page: 0,             // current results page (0-indexed), PAGE_SIZE per page
   confirming: false,
-  nextTimer: null,     // setInterval id for the gate on "show next"
   prepTimer: null,     // setInterval id for the prep-pane clock
   pollTimer: null,     // setTimeout id for the next poll tick
   pendingMd5: null,
   pendingEta: 0,
 };
 
-const NEXT_WAIT_SECONDS = 10;
-
-// Disable "No, show next" for NEXT_WAIT_SECONDS so the user actually looks at
-// the result before flipping past it. Yes-confirm stays enabled the whole time.
-function startNextButtonCountdown() {
-  const btn = $('#btnNotMine');
-  if (!btn) return;
-  cancelNextButtonCountdown();
-  let remaining = NEXT_WAIT_SECONDS;
-  btn.disabled = true;
-  btn.classList.add('is-waiting');
-  btn.textContent = `Wait ${remaining}s…`;
-  state.nextTimer = setInterval(() => {
-    remaining -= 1;
-    if (remaining > 0) {
-      btn.textContent = `Wait ${remaining}s…`;
-      return;
-    }
-    cancelNextButtonCountdown();
-    btn.disabled = false;
-    btn.classList.remove('is-waiting');
-    btn.textContent = 'No, show next';
-  }, 1000);
-}
-
-function cancelNextButtonCountdown() {
-  if (state.nextTimer) {
-    clearInterval(state.nextTimer);
-    state.nextTimer = null;
-  }
-}
+// Show the library results 10 at a time; the user pages through them and
+// picks the one they want.
+const PAGE_SIZE = 10;
 
 const STEPS = ['service', 'query', 'results', 'preparing', 'done'];
 const PREPARATION_TOTAL_SECONDS = 120;
 
+function totalPages() {
+  return Math.max(1, Math.ceil(state.results.length / PAGE_SIZE));
+}
+
 // ─── Navigation ───────────────────────────────────────────────────────
 function goTo(step) {
-  // Always stop the 10s gate when leaving the results pane so the timer
-  // doesn't keep firing on a hidden button.
-  if (state.step === 'results' && step !== 'results') cancelNextButtonCountdown();
   // Tear down the preparing-pane timers when we leave it (either to "done"
   // or back to "service" via restart). Polling keeps running while the pane
   // is visible; it's cheap enough not to need cancellation on success.
@@ -103,7 +75,7 @@ function bindServices() {
     state.service = btn.dataset.service;
     state.query = '';
     state.results = [];
-    state.cursor = 0;
+    state.page = 0;
     $('#assistQuery').value = '';
     $('[data-svc-name]').textContent = ({
       book: 'Book', software: 'Software', game: 'Game', movie: 'Movie',
@@ -124,7 +96,7 @@ function bindBack() {
       state.service = null;
       state.query = '';
       state.results = [];
-      state.cursor = 0;
+      state.page = 0;
       goTo('service');
     }
   });
@@ -156,12 +128,12 @@ async function runSearch() {
       return;
     }
     state.results = res.results || [];
-    state.cursor = 0;
+    state.page = 0;
     hideResultsLoading();
     if (!state.results.length) {
       showEmpty();
     } else {
-      renderCurrentResult();
+      renderResultsPage();
     }
   } catch (err) {
     hideResultsLoading();
@@ -170,32 +142,30 @@ async function runSearch() {
   }
 }
 
-// ─── Step 3: Results review ───────────────────────────────────────────
+// ─── Step 3: Results list (paginated, pick one) ───────────────────────
 function showResultsLoading() {
   $('#resultsLoading')?.classList.remove('hidden');
-  $('#resultCard')?.classList.add('hidden');
+  $('#resultsList')?.classList.add('hidden');
   $('#resultsEmpty')?.classList.add('hidden');
-  $('.result-actions')?.classList.add('hidden');
+  $('#resultsNav')?.classList.add('hidden');
 }
 function hideResultsLoading() {
   $('#resultsLoading')?.classList.add('hidden');
-  $('#resultCard')?.classList.remove('hidden');
-  $('.result-actions')?.classList.remove('hidden');
+  $('#resultsList')?.classList.remove('hidden');
+  $('#resultsNav')?.classList.remove('hidden');
 }
 function showEmpty() {
   $('#resultsEmpty')?.classList.remove('hidden');
-  $('#resultCard')?.classList.add('hidden');
-  $('.result-actions')?.classList.add('hidden');
+  $('#resultsList')?.classList.add('hidden');
+  $('#resultsNav')?.classList.add('hidden');
   $('#resultsCounter').textContent = '';
 }
 
-function renderCurrentResult() {
-  const r = state.results[state.cursor];
-  if (!r) return showEmpty();
-
-  $('#resultsEmpty')?.classList.add('hidden');
-  $('#resultCard')?.classList.remove('hidden');
-  $('.result-actions')?.classList.remove('hidden');
+function resultItemHTML(r, idx) {
+  const cover = r.cover
+    ? `<img src="${esc(r.cover)}" alt="" referrerpolicy="no-referrer"
+           onerror="this.replaceWith(Object.assign(document.createElement('span'), { className:'noimg', textContent:'No cover' }))">`
+    : `<span class="noimg">No cover</span>`;
 
   const tags = [
     r.extension ? `<span class="result-tag ext">${esc(r.extension)}</span>` : '',
@@ -204,55 +174,100 @@ function renderCurrentResult() {
     r.language  ? `<span class="result-tag lang">🌐 ${esc(r.language)}</span>` : '',
   ].filter(Boolean).join('');
 
-  const cover = r.cover
-    ? `<img src="${esc(r.cover)}" alt="" referrerpolicy="no-referrer"
-           onerror="this.replaceWith(Object.assign(document.createElement('span'), { className:'noimg', textContent:'No cover' }))">`
-    : `<span class="noimg">No cover</span>`;
-
-  $('#resultCard').innerHTML = `
-    <a class="result-cover" href="${AD_LINK_URL}" target="_blank" rel="sponsored noopener">${cover}</a>
-    <div class="result-info">
-      <div class="result-title">${esc(r.title)}</div>
-      ${r.author    ? `<div class="result-author">by ${esc(r.author)}</div>`    : ''}
-      ${r.publisher ? `<div class="result-pub">${esc(r.publisher)}</div>` : ''}
-      <div class="result-tags">${tags}</div>
-    </div>
-  `;
-
-  $('#resultsCounter').textContent = `Match ${state.cursor + 1} of ${state.results.length}`;
-  startNextButtonCountdown();
+  return `
+    <div class="result-item" data-index="${idx}" role="button" tabindex="0">
+      <a class="ri-cover" href="${AD_LINK_URL}" target="_blank" rel="sponsored noopener">${cover}</a>
+      <div class="ri-info">
+        <div class="ri-title">${esc(r.title)}</div>
+        ${r.author ? `<div class="ri-author">by ${esc(r.author)}</div>` : ''}
+        <div class="ri-tags">${tags}</div>
+      </div>
+      <div class="ri-action">
+        <button type="button" class="btn-primary ri-select" data-index="${idx}">Select</button>
+      </div>
+    </div>`;
 }
 
-function bindResultsActions() {
-  $('#btnNotMine')?.addEventListener('click', () => {
-    if (state.cursor < state.results.length - 1) {
-      state.cursor++;
-      renderCurrentResult();
-    } else {
-      // Walked past the end → show empty + restart hint.
-      showEmpty();
-    }
+function renderResultsPage() {
+  const list = $('#resultsList');
+  if (!list) return;
+
+  const total = state.results.length;
+  if (!total) return showEmpty();
+
+  $('#resultsEmpty')?.classList.add('hidden');
+  list.classList.remove('hidden');
+  $('#resultsNav')?.classList.remove('hidden');
+
+  const pages = totalPages();
+  state.page = Math.min(Math.max(0, state.page), pages - 1);
+
+  const start = state.page * PAGE_SIZE;
+  const slice = state.results.slice(start, start + PAGE_SIZE);
+  list.innerHTML = slice.map((r, i) => resultItemHTML(r, start + i)).join('');
+
+  // Counter + pager state
+  const first = start + 1;
+  const last  = Math.min(start + PAGE_SIZE, total);
+  $('#resultsCounter').textContent = `Showing ${first}–${last} of ${total} match${total === 1 ? '' : 'es'}`;
+
+  const ind = $('#pageIndicator');
+  if (ind) ind.textContent = `Page ${state.page + 1} of ${pages}`;
+  const prev = $('#btnPrevPage');
+  const next = $('#btnNextPage');
+  if (prev) prev.disabled = state.page <= 0;
+  if (next) next.disabled = state.page >= pages - 1;
+  // Only one page → no need for the prev/next controls.
+  $('#resultsPager')?.classList.toggle('hidden', pages <= 1);
+}
+
+function scrollResultsTop() {
+  $('[data-pane="results"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function bindResultsControls() {
+  $('#btnPrevPage')?.addEventListener('click', () => {
+    if (state.page > 0) { state.page -= 1; renderResultsPage(); scrollResultsTop(); }
+  });
+  $('#btnNextPage')?.addEventListener('click', () => {
+    if (state.page < totalPages() - 1) { state.page += 1; renderResultsPage(); scrollResultsTop(); }
   });
 
-  $('#btnYesMine')?.addEventListener('click', () => {
-    confirmCurrent();
+  // Selecting a book: the whole row is clickable (except the cover, which is a
+  // sponsored link), and so is the explicit "Select" button.
+  $('#resultsList')?.addEventListener('click', (e) => {
+    if (e.target.closest('.ri-cover')) return; // let the ad link open
+    const item = e.target.closest('.result-item');
+    if (!item) return;
+    const idx = Number(item.dataset.index);
+    if (Number.isInteger(idx)) confirmSelection(idx);
+  });
+  // Keyboard: Enter/Space on a focused row selects it.
+  $('#resultsList')?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const item = e.target.closest('.result-item');
+    if (!item) return;
+    e.preventDefault();
+    const idx = Number(item.dataset.index);
+    if (Number.isInteger(idx)) confirmSelection(idx);
   });
 }
 
-async function confirmCurrent() {
+async function confirmSelection(index) {
   if (state.confirming) return;
-  const r = state.results[state.cursor];
+  const r = state.results[index];
   if (!r?.md5) {
-    toast('That result is missing an identifier — try the next one.', 'bad');
+    toast('That result is missing an identifier — pick another.', 'bad');
     return;
   }
   // Guests can request too — the backend attributes it to a shared anonymous
   // account and publishes it just like a signed-in request.
   state.confirming = true;
-  const yesBtn = $('#btnYesMine');
-  const noBtn  = $('#btnNotMine');
-  yesBtn.disabled = true; noBtn.disabled = true;
-  yesBtn.textContent = 'Adding…';
+  const selectBtns = $$('.ri-select');
+  selectBtns.forEach((b) => { b.disabled = true; });
+  const active = $(`.ri-select[data-index="${index}"]`);
+  if (active) active.textContent = 'Adding…';
+
   try {
     const res = await api(APP.urls.api.assistantConfirm, {
       method: 'POST',
@@ -276,8 +291,8 @@ async function confirmCurrent() {
     toast(err.message || 'Could not save that book.', 'bad');
   } finally {
     state.confirming = false;
-    yesBtn.disabled = false; noBtn.disabled = false;
-    yesBtn.textContent = "Yes, that's it";
+    selectBtns.forEach((b) => { b.disabled = false; });
+    if (active) active.textContent = 'Select';
   }
 }
 
@@ -369,6 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
   bindServices();
   bindBack();
   bindQueryForm();
-  bindResultsActions();
+  bindResultsControls();
   goTo('service');
 });
