@@ -417,34 +417,23 @@ export function hydrateAdSlots(root) {
   document.body.appendChild(s);
 }
 
-// A feed-native sponsored card. Renders with the same post-card / post-head
-// chrome as a real post so it blends into the feed, but its body is a display
-// ad slot (hydrated by hydrateAdSlots) and it has no interactive actions row —
-// it's an ad, not a post. home.js pins one of these to the top of the feed.
+// A feed-native sponsored card. Renders like a regular image post — post-card
+// header + a full-width media area — but the media is the effectivecpmnetwork
+// display slot (the same `container-…` div + invoke.js the ad-bot image posts
+// use, hydrated by hydrateAdSlots). home.js pins one to the top of the feed.
 export function feedAdCardHTML() {
   return `
-    <article class="post-card ad-feed-card" data-ad-feed>
+    <article class="post-card image-card ad-feed-card" data-ad-feed>
       <div class="post-head">
         <span class="avatar ad-feed-av" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></svg>
         </span>
         <div class="who">
           <span class="name">Sponsored</span>
-          <span class="meta">
-            <span>Suggested for you</span>
-            <span class="dot"></span>
-            <span class="post-badge image">Ad</span>
-          </span>
+          <span class="meta"><span class="post-badge image">Ad</span></span>
         </div>
-        <a class="ad-feed-out" href="${AD_LINK_URL}" target="_blank" rel="sponsored noopener" title="Learn more" aria-label="Learn more">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-        </a>
       </div>
       ${adbotSlotHTML('feed-top')}
-      <a class="ad-feed-cta" href="${AD_LINK_URL}" target="_blank" rel="sponsored noopener">
-        <span>Learn more</span>
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </a>
     </article>
   `;
 }
