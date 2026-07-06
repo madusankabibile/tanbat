@@ -158,7 +158,8 @@ function showEmpty() {
   $('#resultsEmpty')?.classList.remove('hidden');
   $('#resultsList')?.classList.add('hidden');
   $('#resultsNav')?.classList.add('hidden');
-  $('#resultsCounter').textContent = '';
+  const counter = $('#resultsCounter');
+  if (counter) counter.textContent = '';
 }
 
 function resultItemHTML(r, idx) {
@@ -209,7 +210,8 @@ function renderResultsPage() {
   // Counter + pager state
   const first = start + 1;
   const last  = Math.min(start + PAGE_SIZE, total);
-  $('#resultsCounter').textContent = `Showing ${first}–${last} of ${total} match${total === 1 ? '' : 'es'}`;
+  const counter = $('#resultsCounter');
+  if (counter) counter.textContent = `Showing ${first}–${last} of ${total} match${total === 1 ? '' : 'es'}`;
 
   const ind = $('#pageIndicator');
   if (ind) ind.textContent = `Page ${state.page + 1} of ${pages}`;
@@ -309,7 +311,8 @@ function renderDone(post, viewUrl) {
     b.language  ? `<span class="result-tag lang">${esc(b.language)}</span>`  : '',
   ].filter(Boolean).join('');
 
-  $('#doneCard').innerHTML = `
+  const doneCard = $('#doneCard');
+  if (doneCard) doneCard.innerHTML = `
     <a class="dc-cover" href="${AD_LINK_URL}" target="_blank" rel="sponsored noopener">${cover}</a>
     <div class="dc-meta">
       <div class="dc-title">${esc(b.title || post.title || 'Untitled')}</div>
