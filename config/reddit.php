@@ -50,9 +50,19 @@ return [
     // from the book + the requesting user.
     'title_template' => '{title} published on the Tanbat.com as requested by the {username}',
 
-    // Body for the auto-comment. {description} → scraped book description.
-    // {title} → book title (used so the search query is exact).
-    'comment_template' =>
-        "{description}\n\n" .
-        "📚 To find your book, go to **tanbat.com/books** and search **\"{title}\"**.",
+    // Auto-comment variations. One is picked at random per post so the bot
+    // doesn't repeat the same line under every submission (reads more human,
+    // and avoids looking like a spam macro to subreddit filters).
+    //
+    // Only {title} is substituted. Keep these friendly and casual, point
+    // readers to the library at https://tanbat.com/books, and DO NOT use
+    // words like "download", "free download" or "free pdf".
+    'comment_templates' => [
+        'If you’re looking for “{title}”, it’s in our community library over at https://tanbat.com/books — just search the title there and you’ll find it. 🙂',
+        'Really enjoyed this one. You can read “{title}” at https://tanbat.com/books — search the title in the library and it’ll come right up.',
+        'For anyone who wants to check out “{title}”, it lives in the Tanbat library: https://tanbat.com/books. Just pop the title into the search there.',
+        'You can find “{title}” at https://tanbat.com/books — head over and search for it in the library. Happy reading!',
+        'Good pick! “{title}” is available in our library at https://tanbat.com/books — search the title there to open it.',
+        'If anyone’s after “{title}”, it’s on https://tanbat.com/books — search the title in the library and you’re set.',
+    ],
 ];

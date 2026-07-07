@@ -18,8 +18,9 @@ use RuntimeException;
  *   3. Get an upload lease from /api/media/asset.json.
  *   4. POST the binary to the lease's S3 URL.
  *   5. Submit kind=image to /api/submit with the uploaded asset URL.
- *   6. Post the description + a "find your book on tanbat.com/books" note as a
- *      top-level comment on the new submission.
+ *   6. Post a short, friendly "find this book at tanbat.com/books" note as a
+ *      top-level comment on the new submission (one of several variations,
+ *      picked at random — see config/reddit.php comment_templates).
  *
  * All credentials live in config/reddit.php — the heartbeat checks the
  * `enabled` flag before instantiating this service.
@@ -91,10 +92,9 @@ class RedditPoster
         // Reddit caps post titles at 300 chars.
         if (mb_strlen($title) > 300) $title = mb_substr($title, 0, 297) . '…';
 
-        $comment = $this->renderTemplate($this->cfg['comment_template'], [
-            '{title}'       => $book->title,
-            '{username}'    => $username,
-            '{description}' => $book->description ?: '(no description provided)',
+        $comment = $this->renderTemplate($this->pickCommentTemplate(), [
+            '{title}'    => $book->title,
+            '{username}' => $username,
         ]);
 
         $token = $this->getAccessToken();
@@ -112,7 +112,7 @@ class RedditPoster
             // 4. Submit the image post.
             $postFullname = $this->submitImagePost($token, $title, $assetUrl);
 
-            // 5. Add description as a comment.
+            // 5. Add the library-pointer note as a comment.
             try {
                 $this->addComment($token, $postFullname, $comment);
             } catch (\Throwable $e) {
@@ -129,6 +129,29 @@ class RedditPoster
     private function renderTemplate(string $tpl, array $values): string
     {
         return strtr($tpl, $values);
+    }
+
+    /**
+     * Pick one auto-comment variation at random so consecutive posts don't
+     * carry the same boilerplate line. Falls back to a sane default if the
+     * config is empty or misconfigured.
+     */
+    private function pickCommentTemplate(): string
+    {
+        $templates = $this->cfg['comment_templates'] ?? [];
+        if (is_string($templates)) {
+            $templates = [$templates];
+        }
+        $templates = array_values(array_filter(
+            (array) $templates,
+            fn ($t) => is_string($t) && trim($t) !== ''
+        ));
+
+        if (empty($templates)) {
+            return 'You can find “{title}” in our library at https://tanbat.com/books — just search the title there.';
+        }
+
+        return $templates[array_rand($templates)];
     }
 
     /**
