@@ -127,7 +127,10 @@ async function runSearch() {
       showEmpty();
       return;
     }
-    state.results = res.results || [];
+    // Only surface results that carry a cover image — coverless hits look
+    // broken in the list and can't be cross-posted. Filtering here (not at
+    // render time) keeps the counter, pager and select-by-index consistent.
+    state.results = (res.results || []).filter((r) => r.cover && String(r.cover).trim() !== '');
     state.page = 0;
     hideResultsLoading();
     if (!state.results.length) {
