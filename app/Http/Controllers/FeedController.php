@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Services\FeedRanker;
+use App\Services\GeoLocator;
 use App\Services\InteractionRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ class FeedController extends Controller
     public function __construct(
         private FeedRanker $ranker,
         private InteractionRecorder $recorder,
+        private GeoLocator $geo,
     ) {}
 
     /**
@@ -33,7 +35,16 @@ class FeedController extends Controller
             explode(',', (string) $request->query('exclude_ids', ''))
         )));
 
-        $result = $this->ranker->feedFor(Auth::user(), $excludeIds, $limit);
+        // Resolve the viewer's country from their IP so the ranker can surface
+        // more local content. Backfill the profile country when it's missing
+        // (never overwrite a self-reported one), but always rank by live IP.
+        $user = Auth::user();
+        $viewerCountry = $this->geo->country($request);
+        if ($user && $viewerCountry && empty($user->country)) {
+            $user->forceFill(['country' => $viewerCountry])->save();
+        }
+
+        $result = $this->ranker->feedFor($user, $excludeIds, $limit, $viewerCountry);
 
         // Reuse the existing PostController shape so the JS can render with
         // its current cardHTML() unchanged.

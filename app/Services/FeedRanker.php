@@ -38,13 +38,17 @@ class FeedRanker
      * @param int[] $excludeIds Post IDs already rendered in this session.
      * @return array{posts: Collection<int, Post>, cold_start: bool, recycled: bool, exhausted: bool}
      */
-    public function feedFor(?User $user, array $excludeIds = [], int $limit = 1): array
+    public function feedFor(?User $user, array $excludeIds = [], int $limit = 1, ?string $viewerCountry = null): array
     {
         $limit = max(1, min(20, $limit));
 
         if (!$user) {
-            return $this->anonymousFeed($limit, $excludeIds) + ['recycled' => false];
+            return $this->anonymousFeed($limit, $excludeIds, $viewerCountry) + ['recycled' => false];
         }
+
+        // Rank by the viewer's live (IP-resolved) country when we have it,
+        // falling back to their self-reported profile country.
+        $viewerCountry = $viewerCountry ?: $user->country;
 
         $interactionCount = (int) DB::table('post_interactions')
             ->where('user_id', $user->id)
@@ -74,8 +78,8 @@ class FeedRanker
         $affinityIndex = $this->loadAffinity($user->id);
         $followIndex   = $this->loadFollowGraph($user->id);
 
-        $scored = $candidates->map(function (Post $p) use ($user, $affinityIndex, $followIndex, $coldStart) {
-            $p->_score = $this->scorePost($p, $user, $affinityIndex, $followIndex, $coldStart);
+        $scored = $candidates->map(function (Post $p) use ($user, $affinityIndex, $followIndex, $coldStart, $viewerCountry) {
+            $p->_score = $this->scorePost($p, $user, $affinityIndex, $followIndex, $coldStart, $viewerCountry);
             return $p;
         })->sortByDesc('_score')->values();
 
@@ -92,15 +96,35 @@ class FeedRanker
     }
 
     /** Unauthenticated visitors: simple trending-newest mix, no personalization. */
-    private function anonymousFeed(int $limit, array $excludeIds = []): array
+    private function anonymousFeed(int $limit, array $excludeIds = [], ?string $viewerCountry = null): array
     {
+        // Heat, dampened for automated/system accounts so genuine members lead
+        // even the guest feed.
+        $botIds  = $this->botUserIds();
+        $botMult = (float) config('feed.bot_multiplier');
+        $heat    = '(likes_count * 1.0 + comments_count * 1.5 + LOG(GREATEST(views_count, 1)) * 0.3)';
+        $bindings = [];
+        if (!empty($botIds)) {
+            $ph    = implode(',', array_fill(0, count($botIds), '?'));
+            $heat  = "($heat) * (CASE WHEN posts.user_id IN ($ph) THEN ? ELSE 1 END)";
+            $bindings = array_merge($botIds, [$botMult]);
+        }
+
         // Book posts are members-only — never expose them to anonymous viewers.
         $q = Post::with(['user:id,name,username,profile_picture', 'category', 'media', 'tags'])
             ->select('posts.*')
-            ->selectRaw('(likes_count * 1.0 + comments_count * 1.5 + LOG(GREATEST(views_count, 1)) * 0.3) AS heat')
+            ->selectRaw("$heat AS heat", $bindings)
             ->where('is_adult', false)
             ->where('type', '!=', 'book');
         if (!empty($excludeIds)) $q->whereNotIn('id', $excludeIds);
+
+        // Prefer posts from the viewer's own country (resolved from their IP).
+        if ($viewerCountry) {
+            $q->selectRaw(
+                '(SELECT au.country FROM users au WHERE au.id = posts.user_id) = ? AS same_country',
+                [$viewerCountry]
+            )->orderByDesc('same_country');
+        }
 
         $rows = $q->orderByDesc('heat')
             ->orderByDesc('created_at')
@@ -268,13 +292,26 @@ class FeedRanker
         );
     }
 
-    private function scorePost(Post $post, User $user, array $affinity, array $follows, bool $coldStart): float
+    /** User ids of the automated/system accounts (config/bots.php), resolved once. */
+    private ?array $botIds = null;
+    private function botUserIds(): array
+    {
+        if ($this->botIds !== null) {
+            return $this->botIds;
+        }
+        $names = (array) config('bots.usernames', []);
+        return $this->botIds = empty($names)
+            ? []
+            : DB::table('users')->whereIn('username', $names)->pluck('id')->map('intval')->all();
+    }
+
+    private function scorePost(Post $post, User $user, array $affinity, array $follows, bool $coldStart, ?string $viewerCountry = null): float
     {
         $w = config('feed.weights');
 
         $content     = $this->contentScore($post);
         $affinityS   = $this->affinityScore($post, $affinity);
-        $demographic = $this->demographicScore($post, $user);
+        $demographic = $this->demographicScore($post, $user, $viewerCountry);
         $freshness   = $this->freshnessScore($post);
 
         // Cold-start users have weak affinity signals — lean on globally-good
@@ -299,6 +336,19 @@ class FeedRanker
         // opted in, so we want to honour the signal.
         if (isset($follows[$post->user_id])) {
             $score *= (float) config('feed.follow_multiplier');
+        }
+
+        // Give local content more visibility: boost posts whose author is in the
+        // viewer's country (viewer country resolved from IP, see GeoLocator).
+        if ($viewerCountry && $post->user?->country
+            && strcasecmp($viewerCountry, $post->user->country) === 0) {
+            $score *= (float) config('feed.same_country_multiplier');
+        }
+
+        // Down-rank automated/system accounts (news/meme/ad/video bots + the
+        // shared anonymous account) so genuine members' posts take precedence.
+        if (in_array($post->user_id, $this->botUserIds(), true)) {
+            $score *= (float) config('feed.bot_multiplier');
         }
 
         // New + recommended synergy. A post that is BOTH fresh and a good
@@ -375,14 +425,16 @@ class FeedRanker
         return $score;
     }
 
-    private function demographicScore(Post $post, User $user): float
+    private function demographicScore(Post $post, User $user, ?string $viewerCountry = null): float
     {
         $d = config('feed.demographic');
         $score = 0.0;
         $author = $post->user;
         if (!$author) return 0.0;
 
-        if ($user->country && $author->country && $user->country === $author->country) {
+        // Prefer the viewer's live (IP) country; fall back to their profile.
+        $viewerCountry = $viewerCountry ?: $user->country;
+        if ($viewerCountry && $author->country && strcasecmp($viewerCountry, $author->country) === 0) {
             $score += $d['same_country_weight'];
         }
         if ($user->age && $author->age && abs((int) $user->age - (int) $author->age) <= $d['age_band_years']) {

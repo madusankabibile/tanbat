@@ -93,6 +93,16 @@ return [
         'same_gender_weight'    => 0.25,
     ],
 
+    // Multiplicative score factor for posts authored in the viewer's own
+    // country (country resolved from the viewer's IP, see App\Services\GeoLocator).
+    // >1 gives local content more visibility. Stacks on the additive
+    // demographic.same_country_weight above.
+    'same_country_multiplier' => 1.35,
+
+    // Multiplicative score factor for posts by automated/system accounts
+    // (config/bots.php). <1 pushes bot content below genuine members' posts.
+    'bot_multiplier' => 0.5,
+
     // Candidate pool size — pull this many posts before scoring to keep ranking cheap.
     'candidate_pool_size' => 400,
 
