@@ -945,18 +945,31 @@ async function openPostModal(id) {
       stage.innerHTML = buildGalleryHTML(post.media);
       bindGallerySlider(stage);
     } else if (post.type === 'status') {
-      const bg = post.bg_color || '#1E1B4B';
-      const fg = post.font_color || (isLight(bg) ? '#1E1B4B' : '#FFFFFF');
-      const img = post.media?.[0]?.url ? `<img src="${esc(post.media[0].url)}" class="mt-4 max-h-72 rounded-xl" alt="">` : '';
-      const cta = post.user?.username === 'robert_sheffield' ? `<div class="mt-5">${newsbotCtaHTML()}</div>` : '';
-      stage.innerHTML = `
-        <div class="grid h-full w-full place-items-center p-10 text-center" style="background:${esc(bg)};color:${esc(fg)}">
-          <div>
-            <div class="text-2xl font-semibold leading-snug">${esc(post.status_text || '')}</div>
-            ${img}
-            ${cta}
-          </div>
-        </div>`;
+      if (post.user?.username === 'robert_sheffield') {
+        // News card on a white panel so it's legible over the black stage.
+        const img = post.media?.[0]?.url ? `<img src="${esc(post.media[0].url)}" class="w-full rounded-xl" alt="">` : '';
+        const desc = post.description ? `<p class="news-desc">${esc(post.description)}</p>` : '';
+        stage.innerHTML = `
+          <div class="h-full w-full overflow-y-auto bg-white">
+            <div class="mx-auto max-w-xl p-5">
+              ${img}
+              <div class="news-topic">${esc(post.status_text || '')}</div>
+              ${desc}
+              ${newsbotCtaHTML()}
+            </div>
+          </div>`;
+      } else {
+        const bg = post.bg_color || '#1E1B4B';
+        const fg = post.font_color || (isLight(bg) ? '#1E1B4B' : '#FFFFFF');
+        const img = post.media?.[0]?.url ? `<img src="${esc(post.media[0].url)}" class="mt-4 max-h-72 rounded-xl" alt="">` : '';
+        stage.innerHTML = `
+          <div class="grid h-full w-full place-items-center p-10 text-center" style="background:${esc(bg)};color:${esc(fg)}">
+            <div>
+              <div class="text-2xl font-semibold leading-snug">${esc(post.status_text || '')}</div>
+              ${img}
+            </div>
+          </div>`;
+      }
     }
 
     // RIGHT — meta + comments

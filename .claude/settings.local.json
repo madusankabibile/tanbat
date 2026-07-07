@@ -21,7 +21,9 @@
       "Bash(grep -rnoE \"\\(DB::raw|whereRaw|orderByRaw|selectRaw|havingRaw\\)\\\\\\([^\\)]*\\\\\\\\\\\\\\\\?\\\\\"[^\\\\\"]+\\\\\\\\\\\\\\\\?\\\\\"[^\\)]*\\\\\\)\" app/)",
       "Bash(php -l app/Services/RedditPoster.php)",
       "Bash(php -l app/Http/Controllers/Admin/BookController.php)",
-      "Bash(php -l app/Http/Controllers/UserController.php)"
+      "Bash(php -l app/Http/Controllers/UserController.php)",
+      "Bash(xargs -I{} sed -n '{}p' resources/views/home.blade.php)",
+      "Bash(php -l app/Console/Commands/PostWorldNewsFromBot.php)"
     ]
   }
 }

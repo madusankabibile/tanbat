@@ -1,8 +1,8 @@
-const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"},{key:"love",emoji:"❤️",label:"Love",color:"#F43F5E"},{key:"haha",emoji:"😆",label:"Haha",color:"#F59E0B"},{key:"wow",emoji:"😮",label:"Wow",color:"#F59E0B"},{key:"sad",emoji:"😢",label:"Sad",color:"#F59E0B"},{key:"angry",emoji:"😡",label:"Angry",color:"#EF4444"}],f=Object.fromEntries(g.map(e=>[e.key,e])),i=e=>String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");function b(e){return e?`${w.urls.profileBase}/${encodeURIComponent(e)}`:"#"}function _(e){if(!e)return"";const t=Date.parse(e);if(Number.isNaN(t))return"";const s=Math.max(0,Date.now()-t),a=6e4,n=60*a,o=24*n;if(s>=5*o)return"";if(s<a)return"just now";if(s<n)return`${Math.floor(s/a)} min ago`;if(s<o)return`${Math.floor(s/n)} hr ago`;const r=Math.floor(s/o);return`${r} day${r===1?"":"s"} ago`}function L(e){if(!e||e[0]!=="#")return!0;const t=e.length===4?e.slice(1).split("").map(o=>o+o).join(""):e.slice(1,7),s=parseInt(t.slice(0,2),16),a=parseInt(t.slice(2,4),16),n=parseInt(t.slice(4,6),16);return(s*299+a*587+n*114)/1e3>=160}function x(e){const t=b(e==null?void 0:e.username),s=e!=null&&e.id?`data-user-id="${e.id}"`:"";if(e!=null&&e.profile_picture)return`<a href="${t}" ${s} data-user-link><img class="avatar" src="${i(e.profile_picture)}" alt=""></a>`;const a=i(((e==null?void 0:e.username)||(e==null?void 0:e.name)||"U").charAt(0).toUpperCase());return`<a href="${t}" ${s} data-user-link><span class="avatar">${a}</span></a>`}function u(e,t,s){const a=e.user||{},n=i(a.name||a.username||"User"),o=i(_(e.created_at_iso)),r=Number(e.views_count||0).toLocaleString(),l=b(a.username),d=a.id?`data-user-id="${a.id}"`:"";return`
+const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"},{key:"love",emoji:"❤️",label:"Love",color:"#F43F5E"},{key:"haha",emoji:"😆",label:"Haha",color:"#F59E0B"},{key:"wow",emoji:"😮",label:"Wow",color:"#F59E0B"},{key:"sad",emoji:"😢",label:"Sad",color:"#F59E0B"},{key:"angry",emoji:"😡",label:"Angry",color:"#EF4444"}],f=Object.fromEntries(g.map(e=>[e.key,e])),i=e=>String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");function $(e){return e?`${w.urls.profileBase}/${encodeURIComponent(e)}`:"#"}function _(e){if(!e)return"";const t=Date.parse(e);if(Number.isNaN(t))return"";const s=Math.max(0,Date.now()-t),a=6e4,n=60*a,o=24*n;if(s>=5*o)return"";if(s<a)return"just now";if(s<n)return`${Math.floor(s/a)} min ago`;if(s<o)return`${Math.floor(s/n)} hr ago`;const r=Math.floor(s/o);return`${r} day${r===1?"":"s"} ago`}function L(e){if(!e||e[0]!=="#")return!0;const t=e.length===4?e.slice(1).split("").map(o=>o+o).join(""):e.slice(1,7),s=parseInt(t.slice(0,2),16),a=parseInt(t.slice(2,4),16),n=parseInt(t.slice(4,6),16);return(s*299+a*587+n*114)/1e3>=160}function x(e){const t=$(e==null?void 0:e.username),s=e!=null&&e.id?`data-user-id="${e.id}"`:"";if(e!=null&&e.profile_picture)return`<a href="${t}" ${s} data-user-link><img class="avatar" src="${i(e.profile_picture)}" alt=""></a>`;const a=i(((e==null?void 0:e.username)||(e==null?void 0:e.name)||"U").charAt(0).toUpperCase());return`<a href="${t}" ${s} data-user-link><span class="avatar">${a}</span></a>`}function d(e,t,s){const a=e.user||{},n=i(a.name||a.username||"User"),o=i(_(e.created_at_iso)),r=Number(e.views_count||0).toLocaleString(),l=$(a.username),p=a.id?`data-user-id="${a.id}"`:"";return`
     <div class="post-head">
       ${x(a)}
       <div class="who">
-        <a href="${l}" ${d} data-user-link class="name hover:underline">${n}</a>
+        <a href="${l}" ${p} data-user-link class="name hover:underline">${n}</a>
         <span class="meta">
           ${o?`<span>${o}</span><span class="dot"></span>`:""}
           <span class="post-badge ${t}">${s}</span>
@@ -56,9 +56,9 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
         <button type="button" class="reaction-pop-btn" data-react="${e.key}" title="${e.label}" aria-label="${e.label}">
           <span class="re">${e.emoji}</span>
         </button>`).join("")}
-    </div>`}function $(e){return(e||[]).slice(0,3).map(s=>{var a;return`<span class="re-chip">${((a=f[s])==null?void 0:a.emoji)||"👍"}</span>`}).join("")}function A(){return'<svg class="re-default" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>'}function p(e){const t=Number(e.likes_count||0),s=Number(e.comments_count||0),a=e.my_reaction?f[e.my_reaction]:null;return`
+    </div>`}function b(e){return(e||[]).slice(0,3).map(s=>{var a;return`<span class="re-chip">${((a=f[s])==null?void 0:a.emoji)||"👍"}</span>`}).join("")}function A(){return'<svg class="re-default" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>'}function u(e){const t=Number(e.likes_count||0),s=Number(e.comments_count||0),a=e.my_reaction?f[e.my_reaction]:null;return`
     <div class="post-counts" ${t>0||s>0?"":"hidden"}>
-      <span class="reaction-stack" data-reaction-stack>${$(e.top_reactions)}</span>
+      <span class="reaction-stack" data-reaction-stack>${b(e.top_reactions)}</span>
       <span data-likes-count>${t>0?t.toLocaleString():""}</span>
       <span class="comment-count" data-comment-count style="margin-left:auto">${s>0?`${s.toLocaleString()} comment${s===1?"":"s"}`:""}</span>
     </div>
@@ -81,17 +81,27 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
         <span class="lbl">Share</span>
       </button>
     </div>
-  `}function V(e,t,s){if(!t)return;const a=s?f[s]:null;t.classList.toggle("is-reacted",!!a),t.setAttribute("aria-pressed",a?"true":"false"),t.dataset.reaction=a?a.key:"";const n=t.querySelector(".re-emoji");n&&(n.textContent=a?a.emoji:"");const o=t.querySelector("[data-like-label]");o&&(o.textContent=a?a.label:"Like",o.style.color=a?a.color:"")}function W(e,t){const s=e==null?void 0:e.querySelector("[data-likes-count]");s&&(s.textContent=t>0?Number(t).toLocaleString():""),H(e)}function G(e,t){const s=e==null?void 0:e.querySelector("[data-reaction-stack]");s&&(s.innerHTML=$(t))}function H(e){var n,o;const t=e==null?void 0:e.querySelector(".post-counts");if(!t)return;const s=(((n=t.querySelector("[data-likes-count]"))==null?void 0:n.textContent)||"").trim(),a=(((o=t.querySelector("[data-comment-count]"))==null?void 0:o.textContent)||"").trim();t.toggleAttribute("hidden",!s&&!a)}function N(e){e&&(e.classList.remove("is-open"),e.contains(document.activeElement)&&document.activeElement.blur(),e.classList.add("is-dismissed"),e.addEventListener("pointerleave",()=>e.classList.remove("is-dismissed"),{once:!0}))}function K(e,t){if(!e)return;let s=null;const a=()=>{s&&(clearTimeout(s),s=null)};e.addEventListener("click",n=>{const o=n.target.closest("[data-react]");if(!o||!e.contains(o))return;n.preventDefault(),n.stopPropagation();const r=o.closest("[data-post-id]");N(o.closest(".reaction-wrap")),t(r,o.dataset.react)}),e.addEventListener("pointerdown",n=>{if(n.pointerType==="mouse")return;const o=n.target.closest(".btn-like");if(!o)return;const r=o.closest(".reaction-wrap");s=setTimeout(()=>r==null?void 0:r.classList.add("is-open"),350)}),["pointerup","pointerleave","pointercancel"].forEach(n=>e.addEventListener(n,a)),document.addEventListener("click",n=>{n.target.closest(".reaction-wrap")||e.querySelectorAll(".reaction-wrap.is-open").forEach(o=>o.classList.remove("is-open"))})}function P(e){var o,r,l;const t=e.bg_color||"#EEF2FF",s=e.font_color||(L(t)?"#1E1B4B":"#FFFFFF"),a=(r=(o=e.media)==null?void 0:o[0])!=null&&r.url?`<div class="post-media"><img src="${i(e.media[0].url)}" loading="lazy" alt=""></div>`:"",n=((l=e.user)==null?void 0:l.username)==="robert_sheffield"?R():"";return`
+  `}function V(e,t,s){if(!t)return;const a=s?f[s]:null;t.classList.toggle("is-reacted",!!a),t.setAttribute("aria-pressed",a?"true":"false"),t.dataset.reaction=a?a.key:"";const n=t.querySelector(".re-emoji");n&&(n.textContent=a?a.emoji:"");const o=t.querySelector("[data-like-label]");o&&(o.textContent=a?a.label:"Like",o.style.color=a?a.color:"")}function W(e,t){const s=e==null?void 0:e.querySelector("[data-likes-count]");s&&(s.textContent=t>0?Number(t).toLocaleString():""),H(e)}function G(e,t){const s=e==null?void 0:e.querySelector("[data-reaction-stack]");s&&(s.innerHTML=b(t))}function H(e){var n,o;const t=e==null?void 0:e.querySelector(".post-counts");if(!t)return;const s=(((n=t.querySelector("[data-likes-count]"))==null?void 0:n.textContent)||"").trim(),a=(((o=t.querySelector("[data-comment-count]"))==null?void 0:o.textContent)||"").trim();t.toggleAttribute("hidden",!s&&!a)}function N(e){e&&(e.classList.remove("is-open"),e.contains(document.activeElement)&&document.activeElement.blur(),e.classList.add("is-dismissed"),e.addEventListener("pointerleave",()=>e.classList.remove("is-dismissed"),{once:!0}))}function K(e,t){if(!e)return;let s=null;const a=()=>{s&&(clearTimeout(s),s=null)};e.addEventListener("click",n=>{const o=n.target.closest("[data-react]");if(!o||!e.contains(o))return;n.preventDefault(),n.stopPropagation();const r=o.closest("[data-post-id]");N(o.closest(".reaction-wrap")),t(r,o.dataset.react)}),e.addEventListener("pointerdown",n=>{if(n.pointerType==="mouse")return;const o=n.target.closest(".btn-like");if(!o)return;const r=o.closest(".reaction-wrap");s=setTimeout(()=>r==null?void 0:r.classList.add("is-open"),350)}),["pointerup","pointerleave","pointercancel"].forEach(n=>e.addEventListener(n,a)),document.addEventListener("click",n=>{n.target.closest(".reaction-wrap")||e.querySelectorAll(".reaction-wrap.is-open").forEach(o=>o.classList.remove("is-open"))})}function P(e){var n,o,r;const t=(o=(n=e.media)==null?void 0:n[0])!=null&&o.url?`<div class="post-media"><img src="${i(e.media[0].url)}" loading="lazy" alt=""></div>`:"";if(((r=e.user)==null?void 0:r.username)==="robert_sheffield"){const l=e.description?`<p class="news-desc">${i(e.description)}</p>`:"";return`
+      <article class="post-card status-card news-card" data-post-id="${e.id}">
+        ${d(e,"status","News")}
+        <div data-open>
+          ${t}
+          <div class="news-topic">${i(e.status_text||"")}</div>
+          ${l}
+        </div>
+        ${R()}
+        ${u(e)}
+      </article>
+    `}const s=e.bg_color||"#EEF2FF",a=e.font_color||(L(s)?"#1E1B4B":"#FFFFFF");return`
     <article class="post-card status-card" data-post-id="${e.id}">
-      ${u(e,"status","Status")}
-      <div class="status-canvas" data-open style="background:${i(t)};color:${i(s)};">
+      ${d(e,"status","Status")}
+      <div class="status-canvas" data-open style="background:${i(s)};color:${i(a)};">
         ${i(e.status_text||"")}
       </div>
-      ${a}
-      ${n}
-      ${p(e)}
+      ${t}
+      ${u(e)}
     </article>
-  `}const q="https://www.effectivecpmnetwork.com/gc1v4hw8?key=b0e0c39593829879ba649d8cb2ef71ad",F=q;function R(){return`<a class="newsbot-continue" href="${F}" target="_blank" rel="noopener sponsored">Continue reading…</a>`}function Y(e=document){e.querySelectorAll("[data-countdown]:not([data-cd-bound])").forEach(s=>{s.dataset.cdBound="1";const a=parseInt(s.dataset.countdown,10)||10,n=s.dataset.dl;if(!n)return;const o=s.querySelector("[data-cd-counter]"),r=s.querySelector("[data-cd-label]");let l=a;s.classList.add("is-counting"),s.classList.remove("is-ready"),s.disabled=!0,o&&(o.textContent=`${l}s`),r&&(r.textContent="Preparing your download…");const d=()=>{if(l-=1,l>0){o&&(o.textContent=`${l}s`),setTimeout(d,1e3);return}s.classList.remove("is-counting"),s.classList.add("is-ready"),s.disabled=!1,r&&(r.textContent="Get this book"),o&&(o.textContent="")};s.addEventListener("click",v=>{if(s.classList.contains("is-counting")){v.preventDefault();return}window.open(n,"_blank","noopener")}),setTimeout(d,1e3)})}const y="36ce0149ae6c36811ff6c54b088c483c",z=`https://pl23865704.effectivecpmnetwork.com/${y}/invoke.js`;function k(e){return`
+  `}const q="https://www.effectivecpmnetwork.com/gc1v4hw8?key=b0e0c39593829879ba649d8cb2ef71ad",F=q;function R(){return`<a class="newsbot-continue" href="${F}" target="_blank" rel="noopener sponsored">Continue reading…</a>`}function Y(e=document){e.querySelectorAll("[data-countdown]:not([data-cd-bound])").forEach(s=>{s.dataset.cdBound="1";const a=parseInt(s.dataset.countdown,10)||10,n=s.dataset.dl;if(!n)return;const o=s.querySelector("[data-cd-counter]"),r=s.querySelector("[data-cd-label]");let l=a;s.classList.add("is-counting"),s.classList.remove("is-ready"),s.disabled=!0,o&&(o.textContent=`${l}s`),r&&(r.textContent="Preparing your download…");const p=()=>{if(l-=1,l>0){o&&(o.textContent=`${l}s`),setTimeout(p,1e3);return}s.classList.remove("is-counting"),s.classList.add("is-ready"),s.disabled=!1,r&&(r.textContent="Get this book"),o&&(o.textContent="")};s.addEventListener("click",v=>{if(s.classList.contains("is-counting")){v.preventDefault();return}window.open(n,"_blank","noopener")}),setTimeout(p,1e3)})}const y="36ce0149ae6c36811ff6c54b088c483c",z=`https://pl23865704.effectivecpmnetwork.com/${y}/invoke.js`;function k(e){return`
     <div class="post-media adbot-slot" data-adbot-slot data-post-id="${e}">
       <div id="container-${y}"></div>
     </div>
@@ -110,15 +120,15 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
     </article>
   `}function I(e){var v;const t=(e.media||[]).filter(c=>c==null?void 0:c.url);if(((v=e.user)==null?void 0:v.username)==="daniel_whitmore")return`
       <article class="post-card image-card adbot-card" data-post-id="${e.id}">
-        ${u(e,"image","Sponsored")}
+        ${d(e,"image","Sponsored")}
         ${k(e.id)}
-        ${p(e)}
+        ${u(e)}
       </article>
     `;if(!t.length){const c=e.description?`<div class="post-body">${i(e.description)}</div>`:"";return`
       <article class="post-card image-card" data-post-id="${e.id}">
-        ${u(e,"image","Photo")}
+        ${d(e,"image","Photo")}
         ${c||'<div class="post-body" style="color:#94a3b8">[image unavailable]</div>'}
-        ${p(e)}
+        ${u(e)}
       </article>
     `}const a=e.is_adult?'<span class="adult-pill">18+</span>':"",n=e.description?`<div class="post-body">${i(e.description)}</div>`:"",o=t.length>1,r=t.map(c=>`<img class="gallery-slide" src="${i(c.url)}" loading="lazy" alt="">`).join(""),l=o?`
       <button type="button" class="gallery-btn gallery-prev" data-gallery-nav="-1" aria-label="Previous image">
@@ -128,12 +138,12 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       <span class="gallery-counter" data-gallery-counter>1 / ${t.length}</span>
-  `:"",d=o?`
+  `:"",p=o?`
     <div class="gallery-dots" data-gallery-dots>
       ${t.map((c,h)=>`<span class="dot${h===0?" active":""}"></span>`).join("")}
     </div>`:"";return`
     <article class="post-card image-card" data-post-id="${e.id}">
-      ${u(e,"image","Photo")}
+      ${d(e,"image","Photo")}
       ${n}
       <div class="post-media ${e.is_adult?"is-adult":""}">
         <div class="gallery-wrap">
@@ -141,25 +151,25 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
           ${l}${a}
         </div>
       </div>
-      ${d}
-      ${p(e)}
+      ${p}
+      ${u(e)}
     </article>
   `}function O(e){var n,o;const t=e.is_adult?'<span class="adult-pill">18+</span>':"",s=e.thumbnail||((o=(n=e.media)==null?void 0:n[0])==null?void 0:o.url)||"",a=e.description?`<div class="post-body">${i(e.description)}</div>`:"";return s?`
     <article class="post-card video-card" data-post-id="${e.id}">
-      ${u(e,"video","Video")}
+      ${d(e,"video","Video")}
       ${a}
       <div class="video-thumb-wrap ${e.is_adult?"is-adult":""}" data-open>
         <img src="${i(s)}" loading="lazy" alt="">
         <div class="play-btn"><span class="play-disc"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></div>
         ${t}
       </div>
-      ${p(e)}
+      ${u(e)}
     </article>
   `:`
       <article class="post-card video-card" data-post-id="${e.id}">
-        ${u(e,"video","Video")}
+        ${d(e,"video","Video")}
         ${a||'<div class="post-body" style="color:#94a3b8">[video unavailable]</div>'}
-        ${p(e)}
+        ${u(e)}
       </article>
     `}function U(e){var a;const t=(a=e.category)!=null&&a.name?`<span class="article-cat">${i(e.category.name)}</span>`:"",s=e.featured_image?`
     <a class="article-figure block" href="${i(e.view_url||"#")}">
@@ -167,7 +177,7 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
       ${t}
     </a>`:"";return`
     <article class="post-card article-card" data-post-id="${e.id}">
-      ${u(e,"article","Article")}
+      ${d(e,"article","Article")}
       ${s}
       <div class="article-meta">
         <a href="${i(e.view_url||"#")}" class="article-title block hover:text-brand-600">${i(e.title||"Untitled")}</a>
@@ -177,12 +187,12 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
         Read article
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
       </a>
-      ${p(e)}
+      ${u(e)}
     </article>
   `}function D(e){const t=e.book||{},s=e.view_url||"#",a=t.cover_url?`<img src="${i(t.cover_url)}" alt="" referrerpolicy="no-referrer"
            onerror="this.replaceWith(Object.assign(document.createElement('span'), { className:'book-noimg', textContent:'No cover' }))">`:'<span class="book-noimg">No cover</span>',n=[t.extension?`<span class="book-tag ext">${i(t.extension)}</span>`:"",t.size?`<span class="book-tag size">${i(t.size)}</span>`:"",t.year?`<span class="book-tag year">📅 ${i(t.year)}</span>`:"",t.language?`<span class="book-tag lang">🌐 ${i(t.language)}</span>`:""].filter(Boolean).join("");return`
     <article class="post-card book-card" data-post-id="${e.id}" data-book-slug="${i(t.slug||"")}">
-      ${u(e,"book","Book")}
+      ${d(e,"book","Book")}
       <div class="book-body">
         <a class="book-cover" href="${i(s)}">${a}</a>
         <div class="book-info">
@@ -192,9 +202,9 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
           <div class="book-tags">${n}</div>
         </div>
       </div>
-      ${p(e)}
+      ${u(e)}
     </article>
-  `}function Q(e){return e.type==="status"?P(e):e.type==="image"?I(e):e.type==="video"?O(e):e.type==="article"?U(e):e.type==="book"?D(e):""}function X(e){var o,r;const t=e.querySelector("[data-gallery]"),s=(r=(o=e.parentElement)==null?void 0:o.parentElement)==null?void 0:r.querySelector("[data-gallery-dots]"),a=e.querySelector("[data-gallery-counter]");if(!t)return;const n=()=>{if(!t.clientWidth)return;const l=Math.round(t.scrollLeft/t.clientWidth);s&&s.querySelectorAll(".dot").forEach((v,c)=>v.classList.toggle("active",c===l));const d=t.children.length;a&&(a.textContent=`${l+1} / ${d}`)};t.addEventListener("scroll",n,{passive:!0})}function ee(e,t){var o,r;if(!e||!t)return null;const s=t.embed_provider&&t.embed_id,a=(r=(o=t.media)==null?void 0:o[0])==null?void 0:r.url;if(s)e.innerHTML=`<div class="plyr__video-embed plyr-stage"
+  `}function Q(e){return e.type==="status"?P(e):e.type==="image"?I(e):e.type==="video"?O(e):e.type==="article"?U(e):e.type==="book"?D(e):""}function X(e){var o,r;const t=e.querySelector("[data-gallery]"),s=(r=(o=e.parentElement)==null?void 0:o.parentElement)==null?void 0:r.querySelector("[data-gallery-dots]"),a=e.querySelector("[data-gallery-counter]");if(!t)return;const n=()=>{if(!t.clientWidth)return;const l=Math.round(t.scrollLeft/t.clientWidth);s&&s.querySelectorAll(".dot").forEach((v,c)=>v.classList.toggle("active",c===l));const p=t.children.length;a&&(a.textContent=`${l+1} / ${p}`)};t.addEventListener("scroll",n,{passive:!0})}function ee(e,t){var o,r;if(!e||!t)return null;const s=t.embed_provider&&t.embed_id,a=(r=(o=t.media)==null?void 0:o[0])==null?void 0:r.url;if(s)e.innerHTML=`<div class="plyr__video-embed plyr-stage"
         data-plyr-provider="${i(t.embed_provider)}"
         data-plyr-embed-id="${i(t.embed_id)}"></div>`;else if(a)e.innerHTML=`<video class="plyr-stage" controls playsinline
         poster="${i(t.thumbnail||"")}">

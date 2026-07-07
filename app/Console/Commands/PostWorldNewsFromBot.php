@@ -78,7 +78,8 @@ class PostWorldNewsFromBot extends Command
                 $post = Post::create([
                     'user_id'     => $bot->id,
                     'type'        => 'status',
-                    'status_text' => $c['title'],
+                    'status_text' => $c['title'],       // topic / headline
+                    'description' => $c['summary'],      // scraped summary (may be null)
                     'bg_color'    => $bg,
                     'font_color'  => $fc,
                     'language'    => 'en',
@@ -151,6 +152,7 @@ class PostWorldNewsFromBot extends Command
 
                 $out[] = [
                     'title'     => $title,
+                    'summary'   => $this->extractSummary($item),
                     'image_url' => $this->extractImageUrl($item),
                 ];
             }
@@ -159,6 +161,33 @@ class PostWorldNewsFromBot extends Command
             Log::warning('newsbot: feed exception', ['url' => $url, 'error' => $e->getMessage()]);
             return [];
         }
+    }
+
+    /**
+     * Pull a plain-text summary from an RSS/Atom item. The <description>
+     * (or Atom <summary>) usually holds a one-paragraph teaser, often wrapped
+     * in HTML with an <img> — we strip tags/entities, collapse whitespace,
+     * drop trailing "Continue reading" boilerplate, and cap the length.
+     * Returns null when the feed carries no usable summary.
+     */
+    private function extractSummary(\SimpleXMLElement $item): ?string
+    {
+        $raw = trim((string) ($item->description ?? ''));
+        if ($raw === '') {
+            $raw = trim((string) ($item->summary ?? '')); // Atom
+        }
+        if ($raw === '') return null;
+
+        $text = html_entity_decode(strip_tags($raw), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = trim(preg_replace('/\s+/u', ' ', $text));
+        // Feeds frequently append their own "Continue reading" / "Read more" tail.
+        $text = trim(preg_replace('/\s*(continue reading|read more|read full article).*$/iu', '', $text));
+
+        if ($text === '') return null;
+        if (mb_strlen($text) > 500) {
+            $text = mb_substr($text, 0, 497) . '...';
+        }
+        return $text;
     }
 
     /**

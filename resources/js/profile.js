@@ -419,10 +419,15 @@ async function openPostModal(id) {
       stage.innerHTML = `<div class="flex h-full w-full snap-x snap-mandatory overflow-x-auto scrollbar-none">${post.media.map((m) =>
         `<img src="${esc(m.url)}" class="h-full w-full shrink-0 snap-center object-contain" alt="">`).join('')}</div>`;
     } else if (post.type === 'status') {
-      const bg = post.bg_color || '#1E1B4B';
-      const fg = post.font_color || (isLight(bg) ? '#1E1B4B' : '#FFFFFF');
-      const cta = post.user?.username === 'robert_sheffield' ? `<div class="mt-5">${newsbotCtaHTML()}</div>` : '';
-      stage.innerHTML = `<div class="grid h-full w-full place-items-center p-10 text-center" style="background:${esc(bg)};color:${esc(fg)}"><div><div class="text-2xl font-semibold leading-snug">${esc(post.status_text || '')}</div>${cta}</div></div>`;
+      if (post.user?.username === 'robert_sheffield') {
+        const img = post.media?.[0]?.url ? `<img src="${esc(post.media[0].url)}" class="w-full rounded-xl" alt="">` : '';
+        const desc = post.description ? `<p class="news-desc">${esc(post.description)}</p>` : '';
+        stage.innerHTML = `<div class="h-full w-full overflow-y-auto bg-white"><div class="mx-auto max-w-xl p-5">${img}<div class="news-topic">${esc(post.status_text || '')}</div>${desc}${newsbotCtaHTML()}</div></div>`;
+      } else {
+        const bg = post.bg_color || '#1E1B4B';
+        const fg = post.font_color || (isLight(bg) ? '#1E1B4B' : '#FFFFFF');
+        stage.innerHTML = `<div class="grid h-full w-full place-items-center p-10 text-center" style="background:${esc(bg)};color:${esc(fg)}"><div><div class="text-2xl font-semibold leading-snug">${esc(post.status_text || '')}</div></div></div>`;
+      }
     }
 
     const u = post.user || {};

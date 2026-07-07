@@ -306,11 +306,30 @@ export function bindReactions(container, onReact) {
 }
 
 function statusCard(p) {
-  const bg = p.bg_color || '#EEF2FF';
-  const fg = p.font_color || (isLight(bg) ? '#1E1B4B' : '#FFFFFF');
   const img = p.media?.[0]?.url
     ? `<div class="post-media"><img src="${esc(p.media[0].url)}" loading="lazy" alt=""></div>` : '';
-  const cta = p.user?.username === 'robert_sheffield' ? newsbotCtaHTML() : '';
+
+  // Newsbot posts render as a news card: image, topic (headline), scraped
+  // summary, then a plain "Continue reading…" link to the sponsor.
+  if (p.user?.username === 'robert_sheffield') {
+    const desc = p.description
+      ? `<p class="news-desc">${esc(p.description)}</p>` : '';
+    return `
+      <article class="post-card status-card news-card" data-post-id="${p.id}">
+        ${headerHTML(p, 'status', 'News')}
+        <div data-open>
+          ${img}
+          <div class="news-topic">${esc(p.status_text || '')}</div>
+          ${desc}
+        </div>
+        ${newsbotCtaHTML()}
+        ${actionsHTML(p)}
+      </article>
+    `;
+  }
+
+  const bg = p.bg_color || '#EEF2FF';
+  const fg = p.font_color || (isLight(bg) ? '#1E1B4B' : '#FFFFFF');
   return `
     <article class="post-card status-card" data-post-id="${p.id}">
       ${headerHTML(p, 'status', 'Status')}
@@ -318,7 +337,6 @@ function statusCard(p) {
         ${esc(p.status_text || '')}
       </div>
       ${img}
-      ${cta}
       ${actionsHTML(p)}
     </article>
   `;
