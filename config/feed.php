@@ -101,7 +101,8 @@ return [
 
     // Multiplicative score factor for posts by automated/system accounts
     // (config/bots.php). <1 pushes bot content below genuine members' posts.
-    'bot_multiplier' => 0.5,
+    // Applied last in scorePost (after every boost) so it can't be undone.
+    'bot_multiplier' => 0.25,
 
     // Candidate pool size — pull this many posts before scoring to keep ranking cheap.
     'candidate_pool_size' => 400,

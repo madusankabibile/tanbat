@@ -345,11 +345,7 @@ class FeedRanker
             $score *= (float) config('feed.same_country_multiplier');
         }
 
-        // Down-rank automated/system accounts (news/meme/ad/video bots + the
-        // shared anonymous account) so genuine members' posts take precedence.
-        if (in_array($post->user_id, $this->botUserIds(), true)) {
-            $score *= (float) config('feed.bot_multiplier');
-        }
+        $isBot = in_array($post->user_id, $this->botUserIds(), true);
 
         // New + recommended synergy. A post that is BOTH fresh and a good
         // affinity match for this user gets a multiplicative boost so it
@@ -357,14 +353,26 @@ class FeedRanker
         // affinity yet, so we accept demographic match as the "recommended"
         // signal — this keeps new users from getting a flat "trending" wall
         // and instead surfaces today's content from people like them.
+        //
+        // Bots are excluded: they post constantly, so they'd ALWAYS clear the
+        // freshness floor and hijack this boost — the very thing that was
+        // flooding the feed with bot content.
         $nr = config('feed.new_recommended_boost');
-        if ($freshness >= ($nr['freshness_floor'] ?? 0.25)) {
+        if (!$isBot && $freshness >= ($nr['freshness_floor'] ?? 0.25)) {
             $recommended = $coldStart
                 ? ($demographic >= ($nr['demographic_floor'] ?? 0.30))
                 : ($affinityS  >= ($nr['affinity_floor']    ?? 0.30));
             if ($recommended) {
                 $score *= (float) ($nr['multiplier'] ?? 1.5);
             }
+        }
+
+        // Down-rank automated/system accounts (news/meme/ad/video bots + the
+        // shared anonymous account) so genuine members' posts take precedence.
+        // Applied LAST so no later boost can undo it — a bot post always ends up
+        // below a comparable member post regardless of freshness/engagement.
+        if ($isBot) {
+            $score *= (float) config('feed.bot_multiplier');
         }
 
         // Small noise so two posts with the same score don't tie-break
