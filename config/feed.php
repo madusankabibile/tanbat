@@ -104,6 +104,19 @@ return [
     // Applied last in scorePost (after every boost) so it can't be undone.
     'bot_multiplier' => 0.25,
 
+    // Hard member-first tiering. When true, every genuine member post ranks
+    // above every bot post in the feed (bots only appear once member content is
+    // exhausted), regardless of age/engagement. The bonus is a large additive
+    // constant that dwarfs the normal 0-6 score range so the two tiers never
+    // interleave; within each tier the usual new/hot ordering still applies.
+    'prioritize_members' => true,
+    'member_tier_bonus'  => 1000.0,
+
+    // Always seed the candidate pool with this many of the most-recent member
+    // posts, even when they're older than the recency window below — otherwise
+    // daily-posting bots crowd every genuine (but older) post out of the pool.
+    'member_topup' => 150,
+
     // Candidate pool size — pull this many posts before scoring to keep ranking cheap.
     'candidate_pool_size' => 400,
 

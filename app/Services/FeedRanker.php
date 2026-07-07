@@ -78,8 +78,17 @@ class FeedRanker
         $affinityIndex = $this->loadAffinity($user->id);
         $followIndex   = $this->loadFollowGraph($user->id);
 
-        $scored = $candidates->map(function (Post $p) use ($user, $affinityIndex, $followIndex, $coldStart, $viewerCountry) {
+        $botIds            = $this->botUserIds();
+        $prioritizeMembers = (bool) config('feed.prioritize_members');
+        $memberTierBonus   = (float) config('feed.member_tier_bonus');
+
+        $scored = $candidates->map(function (Post $p) use ($user, $affinityIndex, $followIndex, $coldStart, $viewerCountry, $botIds, $prioritizeMembers, $memberTierBonus) {
             $p->_score = $this->scorePost($p, $user, $affinityIndex, $followIndex, $coldStart, $viewerCountry);
+            // Member-first tier: lift every genuine member post above all bots,
+            // preserving new/hot order within the member tier.
+            if ($prioritizeMembers && !in_array($p->user_id, $botIds, true)) {
+                $p->_score += $memberTierBonus;
+            }
             return $p;
         })->sortByDesc('_score')->values();
 
@@ -261,6 +270,21 @@ class FeedRanker
                 ->take(60 - $candidates->count())
                 ->get();
             $candidates = $candidates->concat($top)->unique('id')->values();
+        }
+
+        // Always seed the pool with recent MEMBER posts, even if they fall
+        // outside the recency window above. Bots post daily, so without this the
+        // 30-day pool is all bots and genuine (older) member content never gets
+        // a chance to be scored. This is the fix for a bot-dominated feed.
+        $botIds = $this->botUserIds();
+        $topUp  = (int) config('feed.member_topup');
+        if (!empty($botIds) && $topUp > 0) {
+            $memberPosts = (clone $query)
+                ->whereNotIn('user_id', $botIds)
+                ->latest()
+                ->take($topUp)
+                ->get();
+            $candidates = $candidates->concat($memberPosts)->unique('id')->values();
         }
 
         return $candidates;
