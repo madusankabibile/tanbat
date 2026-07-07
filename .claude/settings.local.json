@@ -20,7 +20,8 @@
       "Bash(php -l app/Http/Controllers/PageController.php)",
       "Bash(grep -rnoE \"\\(DB::raw|whereRaw|orderByRaw|selectRaw|havingRaw\\)\\\\\\([^\\)]*\\\\\\\\\\\\\\\\?\\\\\"[^\\\\\"]+\\\\\\\\\\\\\\\\?\\\\\"[^\\)]*\\\\\\)\" app/)",
       "Bash(php -l app/Services/RedditPoster.php)",
-      "Bash(php -l app/Http/Controllers/Admin/BookController.php)"
+      "Bash(php -l app/Http/Controllers/Admin/BookController.php)",
+      "Bash(php -l app/Http/Controllers/UserController.php)"
     ]
   }
 }

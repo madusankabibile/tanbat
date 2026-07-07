@@ -51,7 +51,10 @@ class UserController extends Controller
     /** GET /api/users/{user}/posts — paginated feed of a single user's posts */
     public function posts(User $user, Request $request): JsonResponse
     {
-        $with = ['user:id,name,username,profile_picture', 'category', 'media', 'tags'];
+        // bookDetail is required for book-type posts to shape correctly — without
+        // it shapePublic() emits a null book payload and the card renders as a
+        // bare "No cover" + title. Matches the main feed's eager-loads.
+        $with = ['user:id,name,username,profile_picture', 'category', 'media', 'tags', 'bookDetail'];
         if (Auth::check()) {
             $uid = Auth::id();
             $with['likers'] = fn ($q) => $q->where('users.id', $uid);
