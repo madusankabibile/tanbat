@@ -3,8 +3,8 @@
     "file": "assets/banners-C6x9FQL1.js",
     "name": "banners"
   },
-  "_cards-BfEVKg2L.js": {
-    "file": "assets/cards-BfEVKg2L.js",
+  "_cards-wp9IdNpa.js": {
+    "file": "assets/cards-wp9IdNpa.js",
     "name": "cards"
   },
   "resources/css/app.css": {
@@ -25,21 +25,21 @@
     "isEntry": true
   },
   "resources/js/assistant.js": {
-    "file": "assets/assistant-DP4IS3Ge.js",
+    "file": "assets/assistant-DBCYVvCS.js",
     "name": "assistant",
     "src": "resources/js/assistant.js",
     "isEntry": true,
     "imports": [
-      "_cards-BfEVKg2L.js"
+      "_cards-wp9IdNpa.js"
     ]
   },
   "resources/js/book-show.js": {
-    "file": "assets/book-show-Cv5CHmrN.js",
+    "file": "assets/book-show-DvpWfVjc.js",
     "name": "book-show",
     "src": "resources/js/book-show.js",
     "isEntry": true,
     "imports": [
-      "_cards-BfEVKg2L.js"
+      "_cards-wp9IdNpa.js"
     ]
   },
   "resources/js/books.js": {
@@ -49,12 +49,12 @@
     "isEntry": true
   },
   "resources/js/home.js": {
-    "file": "assets/home-De69qv6D.js",
+    "file": "assets/home-m2BwX22n.js",
     "name": "home",
     "src": "resources/js/home.js",
     "isEntry": true,
     "imports": [
-      "_cards-BfEVKg2L.js"
+      "_cards-wp9IdNpa.js"
     ]
   },
   "resources/js/messenger.js": {
@@ -73,12 +73,12 @@
     ]
   },
   "resources/js/profile.js": {
-    "file": "assets/profile-CxWAIiSr.js",
+    "file": "assets/profile-DgXCuitu.js",
     "name": "profile",
     "src": "resources/js/profile.js",
     "isEntry": true,
     "imports": [
-      "_cards-BfEVKg2L.js",
+      "_cards-wp9IdNpa.js",
       "_banners-C6x9FQL1.js"
     ]
   },

@@ -568,19 +568,8 @@ function bookCard(p) {
     b.language  ? `<span class="book-tag lang">🌐 ${esc(b.language)}</span>` : '',
   ].filter(Boolean).join('');
 
-  const dl = b.download_url
-    ? `<button type="button" class="book-dl is-counting"
-              data-countdown="10" data-dl="${esc(b.download_url)}">
-         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-         <span data-cd-label>Preparing your download…</span>
-         <span class="book-dl-counter" data-cd-counter>10s</span>
-       </button>`
-    : '';
-
-  const blurb = b.description
-    ? `<p class="book-desc">${esc(String(b.description).slice(0, 220))}${String(b.description).length > 220 ? '…' : ''}</p>`
-    : '';
-
+  // Description and download are intentionally omitted here — the card links to
+  // the dedicated /books/{slug} page for the full synopsis and download.
   return `
     <article class="post-card book-card" data-post-id="${p.id}" data-book-slug="${esc(b.slug || '')}">
       ${headerHTML(p, 'book', 'Book')}
@@ -591,8 +580,6 @@ function bookCard(p) {
           ${b.author    ? `<div class="book-author">by ${esc(b.author)}</div>`    : ''}
           ${b.publisher ? `<div class="book-pub">${esc(b.publisher)}</div>` : ''}
           <div class="book-tags">${tags}</div>
-          ${blurb}
-          ${dl}
         </div>
       </div>
       ${actionsHTML(p)}
