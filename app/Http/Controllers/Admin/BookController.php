@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BookDetail;
+use App\Models\Post;
+use App\Models\User;
 use App\Services\PinterestPoster;
 use App\Services\RedditPoster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * Admin management for book posts (posts of type "book").
@@ -65,6 +70,121 @@ class BookController extends Controller
             'redditReady', 'redditAccount', 'subreddit',
             'pinterestReady', 'pinterestAccount'
         ));
+    }
+
+    /** Show the "add a book manually" form. */
+    public function create()
+    {
+        return view('admin.books.create');
+    }
+
+    /**
+     * Create a book post by hand — the manual counterpart to the Assistant
+     * wizard's scrape → confirm → materialize pipeline. The post is attributed
+     * to the shared "anonymous" system account, exactly like guest-published
+     * books, so it appears as an anonymous post site-wide.
+     *
+     * md5 is the natural dedup key and is required-unique in the schema. Admins
+     * may paste a real Anna's Archive md5 (to line up with the auto-poster's
+     * dedup) or leave it blank for a synthesized one.
+     */
+    public function store(Request $request)
+    {
+        // Lowercase the md5 up front so the unique check runs against the same
+        // casing the DB stores — otherwise an uppercase duplicate slips past
+        // Rule::unique and dies on the unique index instead.
+        if (is_string($request->input('md5'))) {
+            $request->merge(['md5' => strtolower(trim($request->input('md5')))]);
+        }
+
+        $data = $request->validate([
+            'title'        => ['required', 'string', 'max:255'],
+            'author'       => ['nullable', 'string', 'max:255'],
+            'publisher'    => ['nullable', 'string', 'max:255'],
+            'year'         => ['nullable', 'string', 'max:8'],
+            'language'     => ['nullable', 'string', 'max:64'],
+            'extension'    => ['nullable', 'string', 'max:16'],
+            'size'         => ['nullable', 'string', 'max:32'],
+            'cover_url'    => ['nullable', 'url', 'max:1024'],
+            'download_url' => ['nullable', 'url', 'max:1024'],
+            'description'  => ['nullable', 'string'],
+            'md5'          => [
+                'nullable', 'string', 'regex:/^[a-f0-9]{32}$/i',
+                Rule::unique('book_details', 'md5'),
+            ],
+        ]);
+
+        // Normalize/generate the dedup key. A blank md5 gets a synthesized 32-hex
+        // id so the rest of the book pipeline (dedup, slugging) works unchanged.
+        $md5 = isset($data['md5']) && $data['md5'] !== ''
+            ? strtolower($data['md5'])
+            : md5(Str::uuid()->toString());
+
+        DB::transaction(function () use ($data, $md5) {
+            $post = Post::create([
+                'user_id'     => $this->anonymousUserId(),
+                'type'        => 'book',
+                'title'       => $data['title'],
+                'description' => null,
+            ]);
+
+            BookDetail::create([
+                'post_id'      => $post->id,
+                'md5'          => $md5,
+                'slug'         => $this->makeUniqueSlug($data['title'], $md5),
+                'title'        => $data['title'],
+                'author'       => $data['author']       ?? null,
+                'publisher'    => $data['publisher']    ?? null,
+                'year'         => $data['year']         ?? null,
+                'language'     => $data['language']     ?? null,
+                'extension'    => $data['extension']    ?? null,
+                'size'         => $data['size']         ?? null,
+                'cover_url'    => $data['cover_url']    ?? null,
+                'download_url' => $data['download_url'] ?? null,
+                'description'  => $data['description']  ?? null,
+            ]);
+        });
+
+        return redirect()
+            ->route('admin.books.index')
+            ->with('status', "Book \"{$data['title']}\" added.");
+    }
+
+    /**
+     * Resolve (creating on first use) the shared anonymous system account that
+     * owns guest-published books. Mirrors AssistantController's resolver so
+     * manually-added books collapse onto the same account.
+     */
+    private function anonymousUserId(): int
+    {
+        return User::firstOrCreate(
+            ['username' => 'anonymous'],
+            [
+                'name'     => 'Anonymous',
+                'age'      => 18,
+                'gender'   => 'other',
+                'country'  => 'US',
+                'email'    => 'anonymous@tanbat.local',
+                'password' => bcrypt(Str::random(40)),
+                'role'     => 'user',
+            ]
+        )->id;
+    }
+
+    /**
+     * Deterministic, collision-resistant slug: slugified title + md5 prefix.
+     * Mirrors AssistantController::makeUniqueSlug so hand-made and auto-made
+     * books share one URL scheme.
+     */
+    private function makeUniqueSlug(string $title, string $md5): string
+    {
+        $base = Str::limit(Str::slug($title) ?: 'book', 60, '');
+        $candidate = $base . '-' . substr(strtolower($md5), 0, 8);
+
+        if (!BookDetail::where('slug', $candidate)->exists()) {
+            return $candidate;
+        }
+        return $candidate . '-' . Str::lower(Str::random(4));
     }
 
     /**

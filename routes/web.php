@@ -179,6 +179,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     // Books (book-type posts + Reddit cross-post controls)
     Route::get('books',                [AdminBookController::class, 'index'])->name('books.index');
+    Route::get('books/create',         [AdminBookController::class, 'create'])->name('books.create');
+    Route::post('books',               [AdminBookController::class, 'store'])->name('books.store');
     Route::post('books/{book}/repost', [AdminBookController::class, 'repost'])->name('books.repost');
     Route::post('books/{book}/repost-pinterest', [AdminBookController::class, 'repostPinterest'])->name('books.repost-pinterest');
     Route::delete('books/{book}',      [AdminBookController::class, 'destroy'])->name('books.destroy');
