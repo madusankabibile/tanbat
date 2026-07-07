@@ -53,6 +53,8 @@ Route::get('/messages/{user}',   [MessageController::class, 'show'])->whereNumbe
 /* Vanity-URL redirects → canonical profile paths */
 Route::redirect('/chinmoy9722',  '/u/chinmoy9722');
 Route::redirect('/boss',         '/assistant');
+// Legacy library search page → the new Books page (301 for SEO).
+Route::permanentRedirect('/library_search.php', '/books');
 Route::get('/search',            [SearchController::class, 'page'])->name('search');
 Route::get('/discover/people',   [PeopleController::class, 'page'])->name('people');
 Route::get('/users/feed.xml',    [UserFeedController::class, 'rss'])->name('users.feed');
