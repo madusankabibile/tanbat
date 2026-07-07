@@ -2,6 +2,70 @@
 @section('title', $post->title . ' — Tanbat')
 
 @push('head')
+{{-- Open Graph / Twitter Card tags so link previews (Facebook, X, WhatsApp…)
+     use the article's featured image + title, not whatever image the scraper
+     stumbles on first (which was defaulting to the author's avatar). --}}
+@php
+    $ogImage  = $post->featured_image_url ?: optional($post->user)->avatarUrl();
+    $ogDesc   = (string) \Illuminate\Support\Str::of(strip_tags((string) ($post->short_description ?: $post->body)))
+                  ->squish()->limit(200);
+    $ogUrl    = route('articles.show', $post->slug);
+    $authorNm = optional($post->user)->name ?: optional($post->user)->username;
+    $authorUrl = optional($post->user)->username ? route('profile', $post->user->username) : null;
+    $section  = optional($post->category)->name;
+    $tagNames = $post->relationLoaded('tags') ? $post->tags->pluck('name')->filter()->values() : collect();
+
+    // Schema.org BlogPosting — the primary rich-result signal for Google.
+    $ld = array_filter([
+        '@context'         => 'https://schema.org',
+        '@type'            => 'BlogPosting',
+        'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $ogUrl],
+        'headline'         => \Illuminate\Support\Str::limit($post->title, 110, ''),
+        'description'      => $ogDesc,
+        'image'            => $post->featured_image_url ? [$post->featured_image_url] : null,
+        'datePublished'    => optional($post->created_at)->toIso8601String(),
+        'dateModified'     => optional($post->updated_at)->toIso8601String(),
+        'author'           => $authorNm ? array_filter([
+            '@type' => 'Person', 'name' => $authorNm, 'url' => $authorUrl,
+        ]) : null,
+        'publisher'        => [
+            '@type' => 'Organization',
+            'name'  => 'Tanbat',
+            'logo'  => ['@type' => 'ImageObject', 'url' => asset('favicon.ico')],
+        ],
+        'articleSection'   => $section,
+        'keywords'         => $tagNames->isNotEmpty() ? $tagNames->implode(', ') : null,
+    ], fn ($v) => !is_null($v) && $v !== '' && $v !== []);
+@endphp
+<link rel="canonical" href="{{ $ogUrl }}">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="description" content="{{ $ogDesc }}">
+@if($authorNm)<meta name="author" content="{{ $authorNm }}">@endif
+@if($tagNames->isNotEmpty())<meta name="keywords" content="{{ $tagNames->implode(', ') }}">@endif
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Tanbat">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="{{ $post->title }}">
+<meta property="og:description" content="{{ $ogDesc }}">
+<meta property="og:url" content="{{ $ogUrl }}">
+@if($ogImage)
+<meta property="og:image" content="{{ $ogImage }}">
+<meta property="og:image:alt" content="{{ $post->title }}">
+@endif
+@if($post->created_at)<meta property="article:published_time" content="{{ $post->created_at->toIso8601String() }}">@endif
+@if($post->updated_at)<meta property="article:modified_time" content="{{ $post->updated_at->toIso8601String() }}">@endif
+@if($authorNm)<meta property="article:author" content="{{ $authorNm }}">@endif
+@if($section)<meta property="article:section" content="{{ $section }}">@endif
+@foreach($tagNames as $t)<meta property="article:tag" content="{{ $t }}">
+@endforeach
+<meta name="twitter:card" content="{{ $ogImage ? 'summary_large_image' : 'summary' }}">
+<meta name="twitter:title" content="{{ $post->title }}">
+<meta name="twitter:description" content="{{ $ogDesc }}">
+@if($ogImage)
+<meta name="twitter:image" content="{{ $ogImage }}">
+<meta name="twitter:image:alt" content="{{ $post->title }}">
+@endif
+<script type="application/ld+json">{!! json_encode($ld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 <style>
   .prose-tanbat {
     color: #1E1B4B;
