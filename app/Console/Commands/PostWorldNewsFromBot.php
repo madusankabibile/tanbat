@@ -75,11 +75,16 @@ class PostWorldNewsFromBot extends Command
 
                 [$bg, $fc] = $this->palettes[array_rand($this->palettes)];
 
+                // Scrape the article page for a fuller summary than the RSS
+                // teaser. Only done for the chosen candidate → one HTTP call
+                // per run, not one per headline.
+                $summary = $this->bestSummary($c);
+
                 $post = Post::create([
                     'user_id'     => $bot->id,
                     'type'        => 'status',
                     'status_text' => $c['title'],       // topic / headline
-                    'description' => $c['summary'],      // scraped summary (may be null)
+                    'description' => $summary,           // scraped content (may be null)
                     'bg_color'    => $bg,
                     'font_color'  => $fc,
                     'language'    => 'en',
@@ -153,6 +158,7 @@ class PostWorldNewsFromBot extends Command
                 $out[] = [
                     'title'     => $title,
                     'summary'   => $this->extractSummary($item),
+                    'link'      => $this->extractLink($item),
                     'image_url' => $this->extractImageUrl($item),
                 ];
             }
@@ -178,16 +184,128 @@ class PostWorldNewsFromBot extends Command
         }
         if ($raw === '') return null;
 
-        $text = html_entity_decode(strip_tags($raw), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $text = trim(preg_replace('/\s+/u', ' ', $text));
+        $text = $this->cleanText($raw);
         // Feeds frequently append their own "Continue reading" / "Read more" tail.
-        $text = trim(preg_replace('/\s*(continue reading|read more|read full article).*$/iu', '', $text));
+        $text = trim((string) preg_replace('/\s*(continue reading|read more|read full article).*$/iu', '', $text));
 
-        if ($text === '') return null;
-        if (mb_strlen($text) > 500) {
-            $text = mb_substr($text, 0, 497) . '...';
+        return $text !== '' ? $this->capSummary($text) : null;
+    }
+
+    /**
+     * The best available summary for a chosen headline: a fuller blurb scraped
+     * from the article page when possible, otherwise the RSS teaser. The page
+     * scrape is only worth the extra HTTP round-trip once we've committed to a
+     * candidate, so this is called from handle(), not fetchHeadlines().
+     */
+    private function bestSummary(array $c): ?string
+    {
+        $rss = $c['summary'] ?? null;
+
+        if (!empty($c['link'])) {
+            $page = $this->fetchArticleSummary($c['link']);
+            // Prefer the page summary only when it's genuinely richer.
+            if ($page !== null && mb_strlen($page) > mb_strlen((string) $rss)) {
+                return $page;
+            }
         }
-        return $text;
+        return $rss;
+    }
+
+    /**
+     * Fetch the actual article page and extract a readable summary:
+     *   1. og:description / twitter:description / meta description — the most
+     *      reliable one-to-three sentence blurb across news sites.
+     *   2. Fall back to the first few substantial <p> paragraphs of the body.
+     * Returns null on any fetch/parse failure so the caller can fall back to
+     * the RSS teaser.
+     */
+    private function fetchArticleSummary(string $url): ?string
+    {
+        try {
+            $resp = Http::withOptions(['verify' => false])
+                ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; tanbat-newsbot/1.0)'])
+                ->timeout(15)
+                ->get($url);
+            if (!$resp->ok()) {
+                Log::warning('newsbot: article fetch failed', ['url' => $url, 'status' => $resp->status()]);
+                return null;
+            }
+            $html = $resp->body();
+        } catch (\Throwable $e) {
+            Log::warning('newsbot: article fetch exception', ['url' => $url, 'error' => $e->getMessage()]);
+            return null;
+        }
+        if ($html === '') return null;
+
+        foreach ([['og:description', 'property'], ['twitter:description', 'name'], ['description', 'name']] as [$key, $attr]) {
+            $val = $this->metaContent($html, $key, $attr);
+            if ($val !== null) {
+                $t = $this->cleanText($val);
+                if (mb_strlen($t) >= 60) return $this->capSummary($t);
+            }
+        }
+
+        // Body paragraphs — grab the first few that look like real prose.
+        if (preg_match_all('~<p[^>]*>(.*?)</p>~is', $html, $mm)) {
+            $paras = [];
+            foreach ($mm[1] as $p) {
+                $t = $this->cleanText($p);
+                if (mb_strlen($t) >= 40) $paras[] = $t;
+                if (count($paras) >= 3) break;
+            }
+            if (!empty($paras)) return $this->capSummary(implode(' ', $paras));
+        }
+
+        return null;
+    }
+
+    /**
+     * Pull the content="" of a <meta> tag identified by $attr="$key", tolerating
+     * either attribute order (content-before-key or key-before-content).
+     */
+    private function metaContent(string $html, string $key, string $attr = 'property'): ?string
+    {
+        $k = preg_quote($key, '~');
+        if (preg_match('~<meta[^>]*\b' . $attr . '=["\']' . $k . '["\'][^>]*content=["\'](.*?)["\'][^>]*>~is', $html, $m)) {
+            return $m[1];
+        }
+        if (preg_match('~<meta[^>]*content=["\'](.*?)["\'][^>]*\b' . $attr . '=["\']' . $k . '["\'][^>]*>~is', $html, $m)) {
+            return $m[1];
+        }
+        return null;
+    }
+
+    /** Strip tags/entities and collapse whitespace to a single clean line. */
+    private function cleanText(string $raw): string
+    {
+        $t = html_entity_decode(strip_tags($raw), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return trim((string) preg_replace('/\s+/u', ' ', $t));
+    }
+
+    /** Cap a summary at 500 chars on a clean ellipsis. */
+    private function capSummary(string $text): string
+    {
+        return mb_strlen($text) > 500 ? mb_substr($text, 0, 497) . '...' : $text;
+    }
+
+    /**
+     * Resolve the canonical article URL for an item, handling both RSS 2.0
+     * (<link>URL</link>) and Atom (<link rel="alternate" href="URL"/>).
+     */
+    private function extractLink(\SimpleXMLElement $item): ?string
+    {
+        $link = trim((string) ($item->link ?? ''));
+        if ($link !== '' && preg_match('~^https?://~i', $link)) {
+            return $link;
+        }
+        foreach ($item->link as $l) {
+            $href = trim((string) ($l['href'] ?? ''));
+            $rel  = (string) ($l['rel'] ?? 'alternate');
+            if ($href !== '' && in_array($rel, ['', 'alternate'], true)) {
+                return $href;
+            }
+        }
+        return null;
     }
 
     /**
