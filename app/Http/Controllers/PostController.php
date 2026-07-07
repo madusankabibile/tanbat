@@ -62,8 +62,9 @@ class PostController extends Controller
             'comments.replies.user:id,name,username,profile_picture',
         ]);
 
-        // views_count is impression-based — incremented in InteractionRecorder
-        // when the card is first seen in the feed, not when it's opened.
+        // Count this open. views_count also bumps on feed impressions
+        // (InteractionRecorder); opening a post adds to it too.
+        $post->increment('views_count');
 
         return response()->json([
             'post'     => $this->shape($post, true),

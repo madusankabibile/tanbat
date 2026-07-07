@@ -120,6 +120,10 @@ class AssistantController
             ->first();
         $post->setRelation('bookDetail', $book);
 
+        // Count this visit — opening/refreshing the book page adds to views_count
+        // (which also bumps on feed impressions via InteractionRecorder).
+        $post->increment('views_count');
+
         $myReaction = Auth::check() ? $post->reactionBy(Auth::id()) : null;
 
         return view('book-show', [

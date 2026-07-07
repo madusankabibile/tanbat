@@ -129,8 +129,9 @@ class PageController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
-        // views_count is impression-based — incremented in InteractionRecorder
-        // when the card is first seen in the feed, not when the article is opened.
+        // Count this visit. views_count also bumps on feed impressions
+        // (InteractionRecorder); opening/refreshing the article adds to it too.
+        $post->increment('views_count');
 
         $myReaction = Auth::check() ? $post->reactionBy(Auth::id()) : null;
         $liked = $myReaction !== null;
