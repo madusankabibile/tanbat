@@ -1,6 +1,7 @@
 // Profile page logic: load profile, follow toggle, tabs, post feed
 import { cardHTML, bindGallery, esc, isLight, mountVideoStage, newsbotCtaHTML, hydrateAdSlots, formatPostTime,
-         applyReactionUI, setReactionCount, renderReactionSummary, bindReactions, dismissReactionPanel } from './cards.js';
+         applyReactionUI, setReactionCount, renderReactionSummary, bindReactions, dismissReactionPanel,
+         bindDownloadCountdown } from './cards.js';
 import { applyBannerTo } from './banners.js';
 
 const APP = window.__APP__;
@@ -145,6 +146,7 @@ function renderPosts() {
   wrap.innerHTML = userPosts.map(cardHTML).join('');
   wrap.querySelectorAll('.gallery-wrap').forEach(bindGallery);
   hydrateAdSlots(wrap);
+  bindDownloadCountdown(wrap);
 }
 
 function renderPhotos() {
