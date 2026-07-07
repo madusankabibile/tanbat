@@ -117,6 +117,10 @@ return [
     // daily-posting bots crowd every genuine (but older) post out of the pool.
     'member_topup' => 150,
 
+    // Multiplicative score boost for article-type posts, so long-form member
+    // content is featured near the top of the feed. >1 surfaces more articles.
+    'article_multiplier' => 3.0,
+
     // Candidate pool size — pull this many posts before scoring to keep ranking cheap.
     'candidate_pool_size' => 400,
 

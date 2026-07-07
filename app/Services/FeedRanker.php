@@ -362,6 +362,12 @@ class FeedRanker
             $score *= (float) config('feed.follow_multiplier');
         }
 
+        // Feature long-form content: boost articles so they surface more often
+        // and sit near the top of the feed.
+        if ($post->type === 'article') {
+            $score *= (float) config('feed.article_multiplier');
+        }
+
         // Give local content more visibility: boost posts whose author is in the
         // viewer's country (viewer country resolved from IP, see GeoLocator).
         if ($viewerCountry && $post->user?->country
