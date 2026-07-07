@@ -553,8 +553,7 @@ function articleCard(p) {
 
 function bookCard(p) {
   const b = p.book || {};
-  // The title navigates to the dedicated /books/{slug} page; the cover image
-  // is monetized as an ad image-link instead.
+  // Both the title and the cover navigate to the dedicated /books/{slug} page.
   const titleHref = p.view_url || '#';
 
   const cover = b.cover_url
@@ -586,7 +585,7 @@ function bookCard(p) {
     <article class="post-card book-card" data-post-id="${p.id}" data-book-slug="${esc(b.slug || '')}">
       ${headerHTML(p, 'book', 'Book')}
       <div class="book-body">
-        <a class="book-cover" href="${AD_LINK_URL}" target="_blank" rel="sponsored noopener" data-ad-cover>${cover}</a>
+        <a class="book-cover" href="${esc(titleHref)}">${cover}</a>
         <div class="book-info">
           <a class="book-title" href="${esc(titleHref)}">${esc(b.title || p.title || 'Untitled')}</a>
           ${b.author    ? `<div class="book-author">by ${esc(b.author)}</div>`    : ''}
