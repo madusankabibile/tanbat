@@ -63,6 +63,23 @@ return [
             ]) : [],
         ],
 
+        // Read-only source connection pointing at the imported old Sngine
+        // database. Used solely by the `legacy:import-articles` command.
+        'old' => [
+            'driver' => 'mysql',
+            'host' => env('LEGACY_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('LEGACY_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('LEGACY_DB_DATABASE', 'tanbat_old'),
+            'username' => env('LEGACY_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('LEGACY_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_general_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),

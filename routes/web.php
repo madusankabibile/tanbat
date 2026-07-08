@@ -43,6 +43,12 @@ Route::get('/privacy',           [PageController::class, 'privacy'])->name('priv
 Route::get('/articles/feed.xml', [ArticleFeedController::class, 'rss'])->name('articles.feed');
 Route::get('/articles/create',   [PageController::class, 'articleCreate'])->name('articles.create');
 Route::get('/articles/{slug}',   [PageController::class, 'articleShow'])->name('articles.show');
+// Legacy Sngine blog articles migrated from the old site. Kept at their
+// original /blogs/{post_id}/{slug} URLs for SEO. Separate table, no overlap
+// with the new /articles blog. See App\Http\Controllers\LegacyArticleController.
+Route::get('/blogs/{postId}/{slug?}', [\App\Http\Controllers\LegacyArticleController::class, 'show'])
+    ->whereNumber('postId')
+    ->name('legacy.article');
 // Legacy profile path — kept as a permanent alias to the same controller so
 // old /u/{username} links (and usernames that collide with a reserved
 // top-level route, e.g. "admin") still resolve. New links all use the
