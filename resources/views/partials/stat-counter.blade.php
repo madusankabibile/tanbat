@@ -43,13 +43,16 @@
 .visitor-widget .vw-row {
   display:flex; align-items:center; gap:10px;
   padding:8px 10px; border-radius:10px; transition:background .15s ease;
+  text-decoration:none; color:inherit; cursor:pointer;
 }
 .visitor-widget .vw-row:hover { background:#F8FAFC; }
 .visitor-widget .vw-flag {
-  width:22px; height:16px; border-radius:3px; flex-shrink:0; object-fit:cover;
+  width:22px; height:16px; border-radius:3px; flex-shrink:0; overflow:hidden;
   box-shadow:0 0 0 1px rgba(15,23,42,.08); background:#EEF2FF;
-  display:grid; place-items:center; font-size:12px; line-height:1;
+  display:grid; place-items:center; font-size:11px; line-height:1;
 }
+.visitor-widget .vw-flag img { width:100%; height:100%; object-fit:cover; display:block; }
+.visitor-widget .vw-flag--code { font-size:8.5px; font-weight:800; color:#475569; letter-spacing:.4px; }
 .visitor-widget .vw-who { display:flex; flex-direction:column; min-width:0; line-height:1.25; flex:1; }
 .visitor-widget .vw-country { font-size:12.5px; font-weight:700; color:#1E1B4B; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .visitor-widget .vw-meta { font-size:11px; color:#64748B; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -79,27 +82,32 @@
       .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
   }
 
+  var BASE = (APP.urls && APP.urls.base) || '';
+
   function flag(v) {
-    if (!v.country_code) return '<span class="vw-flag">🌐</span>';
-    var cc = esc(v.country_code);
-    return '<img class="vw-flag" loading="lazy" alt="' + esc(v.country_name) + '"' +
-      ' src="https://flagcdn.com/22x16/' + cc + '.png"' +
-      ' srcset="https://flagcdn.com/44x32/' + cc + '.png 2x"' +
-      ' onerror="this.outerHTML=\'<span class=&quot;vw-flag&quot;>🌐</span>\'">';
+    if (!v.country_code) return '<span class="vw-flag vw-flag--code">🌐</span>';
+    var cc = esc(String(v.country_code).toLowerCase());
+    var up = esc(String(v.country_code).toUpperCase());
+    // Flag image; if flagcdn is unreachable the onerror swaps in the 2-letter code
+    // so the visitor still has a country marker.
+    return '<span class="vw-flag"><img alt="' + up + '" loading="lazy"' +
+      ' src="https://flagcdn.com/w40/' + cc + '.png"' +
+      ' onerror="this.parentNode.className=\'vw-flag vw-flag--code\';this.parentNode.textContent=\'' + up + '\';"></span>';
   }
 
   function row(v) {
-    var page = esc(v.page || '/');
-    var meta = '<span class="vw-page">' + page + '</span>';
+    var page = v.page || '/';
+    var href = BASE + page;
+    var meta = '<span class="vw-page">' + esc(page) + '</span>';
     if (v.referrer) meta += ' <span class="vw-ref">&middot; via ' + esc(v.referrer) + '</span>';
     else meta += ' <span class="vw-ref">&middot; direct</span>';
-    return '<li class="vw-row">' + flag(v) +
+    return '<li><a class="vw-row" href="' + esc(href) + '" title="Open ' + esc(page) + '">' + flag(v) +
       '<span class="vw-who">' +
         '<span class="vw-country">' + esc(v.country_name || 'Unknown') + '</span>' +
         '<span class="vw-meta">' + meta + '</span>' +
       '</span>' +
       '<span class="vw-when">' + esc(v.when || '') + '</span>' +
-    '</li>';
+    '</a></li>';
   }
 
   function render(list, visitors) {

@@ -26,7 +26,10 @@
       "Bash(php -l app/Console/Commands/PostWorldNewsFromBot.php)",
       "Bash(curl -s \"http://localhost/tanbat-xd/tanbat/articles/this-about-you-qquwqo\")",
       "Bash(php -r '$h=stream_get_contents\\(STDIN\\); if\\(preg_match\\(\"~<script type=\\\\\"application/ld\\\\+json\\\\\">\\(.*?\\)</script>~s\",$h,$m\\)\\){ $d=json_decode\\($m[1]\\); echo $d===null ? \"INVALID JSON: \".json_last_error_msg\\(\\) : \"VALID JSON-LD — @type=\".$d->{\"@type\"}.\", author=\".$d->author->name.\", published=\".$d->datePublished.PHP_EOL; } else { echo \"no ld+json found\".PHP_EOL; }')",
-      "Bash(php -l app/Services/FeedRanker.php)"
+      "Bash(php -l app/Services/FeedRanker.php)",
+      "Bash(curl -s \"http://localhost/tanbat-xd/tanbat/api/visitors\")",
+      "Bash(php -r \"echo json_encode\\(json_decode\\(file_get_contents\\('php://stdin'\\)\\),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES\\);\")",
+      "Bash(curl -s -o /dev/null -w \"flagcdn us.png -> HTTP %{http_code} | %{content_type}\\\\n\" \"https://flagcdn.com/w40/us.png\")"
     ]
   }
 }
