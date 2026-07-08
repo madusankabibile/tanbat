@@ -27,7 +27,7 @@ function renderActiveUsers(users) {
     ul.innerHTML = `<li class="px-3 py-4 text-center text-xs text-slate-400">No active users yet.</li>`;
     return;
   }
-  const profileBase = APP.urls?.profileBase || '/u';
+  const profileBase = APP.urls?.profileBase || '';
   ul.innerHTML = users.map((u) => {
     const av = u.profile_picture
       ? `<img src="${esc(u.profile_picture)}" alt="">`

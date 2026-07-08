@@ -108,7 +108,7 @@ class PeopleController extends Controller
                 'gender'          => $u->gender,
                 'age'             => $u->age,
                 'joined_at'       => $u->created_at?->format('M Y'),
-                'url'             => url('/u/' . $u->username),
+                'url'             => url('/' . $u->username),
                 'is_self'         => $viewer->id === $u->id,
                 'is_following'    => isset($followedSet[$u->id]),
             ];

@@ -43,15 +43,20 @@ Route::get('/privacy',           [PageController::class, 'privacy'])->name('priv
 Route::get('/articles/feed.xml', [ArticleFeedController::class, 'rss'])->name('articles.feed');
 Route::get('/articles/create',   [PageController::class, 'articleCreate'])->name('articles.create');
 Route::get('/articles/{slug}',   [PageController::class, 'articleShow'])->name('articles.show');
-Route::get('/u/{username}',      [UserController::class, 'show'])->name('profile');
+// Legacy profile path — kept as a permanent alias to the same controller so
+// old /u/{username} links (and usernames that collide with a reserved
+// top-level route, e.g. "admin") still resolve. New links all use the
+// root-level /{username} URL registered near the bottom of this file.
+Route::get('/u/{username}', [UserController::class, 'show'])
+    ->where('username', '[A-Za-z0-9_.]+');
 Route::get('/messages',          [MessageController::class, 'index'])->name('messages.index');
 // Legacy "Message BabyBoss" deep links — the persona is retired; send them
 // to the Tanbat Assistant wizard instead.
 Route::redirect('/messages/1',   '/assistant');
 Route::get('/messages/{user}',   [MessageController::class, 'show'])->whereNumber('user')->name('messages.show');
 
-/* Vanity-URL redirects → canonical profile paths */
-Route::redirect('/chinmoy9722',  '/u/chinmoy9722');
+/* Vanity-URL redirects. (/chinmoy9722 now resolves directly via the
+   root-level /{username} profile route below, so no redirect is needed.) */
 Route::redirect('/boss',         '/assistant');
 // Legacy library search page → the new Books page (301 for SEO).
 Route::permanentRedirect('/library_search.php', '/books');
@@ -221,6 +226,19 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
     Route::post('ads/{ad}/toggle',     [AdminAdvertisementController::class, 'toggle'])->name('ads.toggle');
     Route::delete('ads/{ad}',          [AdminAdvertisementController::class, 'destroy'])->name('ads.destroy');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Root-level username profiles — https://tanbat.com/{username}
+|--------------------------------------------------------------------------
+| MUST be registered last so every explicit route above (/home, /books,
+| /search, /assistant, …) is matched before a path is treated as a username.
+| Constrained to the username charset (letters, numbers, underscore, dot) so
+| multi-segment URLs and unmatched paths fall through to the fallback.
+*/
+Route::get('/{username}', [UserController::class, 'show'])
+    ->where('username', '[A-Za-z0-9_.]+')
+    ->name('profile');
 
 /*
 |--------------------------------------------------------------------------

@@ -221,7 +221,7 @@
           @endif
           <div class="mt-2 truncate text-sm font-bold text-slate-900">{{ $u->name }}</div>
           <div class="truncate text-xs text-slate-500">&#64;{{ $u->username }}</div>
-          <a href="{{ url('/u/'.$u->username) }}" class="mt-3 inline-block w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-brand-400 hover:text-brand-600">View profile</a>
+          <a href="{{ url('/'.$u->username) }}" class="mt-3 inline-block w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-brand-400 hover:text-brand-600">View profile</a>
         </div>
 
         {{-- Engagement rail --}}
@@ -397,7 +397,7 @@
                 <div class="flex-1">
                   <div class="rounded-2xl bg-slate-50 px-4 py-3">
                     <div class="flex items-baseline gap-2">
-                      <a href="{{ url('/u/'.$c->user->username) }}" class="text-sm font-semibold text-slate-900 hover:text-brand-600">{{ $c->user->username }}</a>
+                      <a href="{{ url('/'.$c->user->username) }}" class="text-sm font-semibold text-slate-900 hover:text-brand-600">{{ $c->user->username }}</a>
                       <span class="text-xs text-slate-400">{{ $c->created_at->diffForHumans() }}</span>
                     </div>
                     <p class="mt-1 text-sm text-slate-700">{{ $c->body }}</p>

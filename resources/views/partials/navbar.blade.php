@@ -146,7 +146,7 @@
             </div>
           </div>
           <div class="my-1 h-px bg-slate-100"></div>
-          <a href="{{ url('/u/' . ($u->username ?? '')) }}" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-brand-50">
+          <a href="{{ url('/' . ($u->username ?? '')) }}" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-brand-50">
             <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             View profile
           </a>
@@ -157,7 +157,7 @@
           </a>
           <button type="button"
                   data-action="share-my-profile"
-                  data-share-url="{{ url('/u/' . ($u->username ?? '')) }}"
+                  data-share-url="{{ url('/' . ($u->username ?? '')) }}"
                   data-share-title="{{ $u->name }} (@{{ $u->username }}) on Tanbat"
                   data-share-image="{{ $u->avatarUrl() ?? '' }}"
                   class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-brand-50">

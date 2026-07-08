@@ -125,7 +125,7 @@ function topCommentHTML(c) {
         <div class="bk-thread-body">
           <div class="bk-bubble">
             <div class="bk-bubble-head">
-              <a href="${esc((APP.urls.profileBase || '/u') + '/' + (c.user?.username || ''))}" class="bk-bubble-name">${esc(c.user?.username || 'User')}</a>
+              <a href="${esc((APP.urls.profileBase || '') + '/' + (c.user?.username || ''))}" class="bk-bubble-name">${esc(c.user?.username || 'User')}</a>
               <span class="bk-bubble-when">${esc(c.created_at || 'just now')}</span>
             </div>
             <p class="bk-bubble-text">${esc(c.body || '')}</p>

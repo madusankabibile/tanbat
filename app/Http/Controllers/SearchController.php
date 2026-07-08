@@ -52,7 +52,7 @@ class SearchController extends Controller
                 'name'            => $u->name,
                 'username'        => $u->username,
                 'profile_picture' => $u->avatarUrl(),
-                'url'             => url('/u/' . $u->username),
+                'url'             => url('/' . $u->username),
             ]);
 
         // Posts text-search. Joining book_details lets a query like "Pragmatic
@@ -171,7 +171,7 @@ class SearchController extends Controller
                 'username'        => $u->username,
                 'profile_picture' => $u->avatarUrl(),
                 'country'         => $u->country,
-                'url'             => url('/u/' . $u->username),
+                'url'             => url('/' . $u->username),
             ]);
             $hasMore = $paginator->hasMorePages();
         } elseif ($tab === 'tags') {

@@ -76,7 +76,7 @@
             @endif
             <div class="rq-text">
               <span>Requested by</span>
-              <a href="{{ $u?->username ? url('/u/' . $u->username) : '#' }}"><strong>{{ $u?->name ?? $u?->username ?? 'a member' }}</strong></a>
+              <a href="{{ $u?->username ? url('/' . $u->username) : '#' }}"><strong>{{ $u?->name ?? $u?->username ?? 'a member' }}</strong></a>
               <span class="rq-when">· {{ $post->created_at?->diffForHumans() }}</span>
             </div>
           </div>
@@ -212,7 +212,7 @@
               <div class="bk-thread-body">
                 <div class="bk-bubble">
                   <div class="bk-bubble-head">
-                    <a href="{{ url('/u/'.$c->user->username) }}" class="bk-bubble-name">{{ $c->user->username }}</a>
+                    <a href="{{ url('/'.$c->user->username) }}" class="bk-bubble-name">{{ $c->user->username }}</a>
                     <span class="bk-bubble-when">{{ $c->created_at->diffForHumans() }}</span>
                   </div>
                   <p class="bk-bubble-text">{{ $c->body }}</p>

@@ -92,6 +92,6 @@ class NotificationController extends Controller
             return url('/home') . '#post-' . $postId;
         }
         $username = $n->data['actor_username'] ?? $n->actor?->username;
-        return $username ? url('/u/' . $username) : null;
+        return $username ? url('/' . $username) : null;
     }
 }

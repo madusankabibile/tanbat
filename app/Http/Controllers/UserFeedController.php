@@ -88,7 +88,7 @@ class UserFeedController extends Controller
     /** Public permalink to the user profile. */
     private function userLink(User $u, string $siteUrl): string
     {
-        return $siteUrl . '/u/' . $u->username;
+        return $siteUrl . '/' . $u->username;
     }
 
     /** Build the description from bio. */

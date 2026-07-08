@@ -69,7 +69,7 @@
           <td class="text-slate-500 text-xs">{{ $user->created_at?->format('M j, Y') }}</td>
           <td class="text-right">
             <div class="inline-flex gap-2">
-              <a href="{{ url('/u/'.$user->username) }}" class="btn-xs" target="_blank">View</a>
+              <a href="{{ url('/'.$user->username) }}" class="btn-xs" target="_blank">View</a>
               <a href="{{ route('admin.users.edit', $user) }}" class="btn-xs">Edit</a>
               <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Delete this user? Their posts will also be removed.');">
                 @csrf @method('DELETE')

@@ -259,7 +259,7 @@ body > ins.adsbygoogle{display:block!important;}
           unread:  {!! json_encode(url('/api/messages/unread-count')) !!},
         },
       },
-      profileBase:   {!! json_encode(url('/u')) !!},
+      profileBase:   {!! json_encode($appBase) !!},
       messagesPage:  {!! json_encode(url('/messages')) !!},
     },
   };

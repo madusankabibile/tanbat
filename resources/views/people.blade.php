@@ -410,7 +410,7 @@
       filters: {!! json_encode(url('/api/people/filters')) !!},
       list:    {!! json_encode(url('/api/people')) !!},
       follow:  {!! json_encode(url('/api/users') . '/:id/follow') !!},
-      profileBase: {!! json_encode(url('/u')) !!},
+      profileBase: {!! json_encode(rtrim(url('/'), '/')) !!},
     },
     initial: {!! json_encode(request()->query('section', 'following')) !!},
   };
