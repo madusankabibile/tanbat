@@ -75,10 +75,8 @@
       @include('partials.ad-banner')
     </section>
 
-    {{-- Site visit stats counter --}}
-    <section class="panel stats-card">
-      <center><script type="text/javascript" src="//widget.supercounters.com/ssl/vt.js"></script><script type="text/javascript">var sc_visitor_var = sc_visitor_var || [];sc_vt(1678595,"FFFFFF","ffffff","000000",5)</script></center>
-    </section>
+    {{-- Recent visitors (custom widget — replaces SuperCounters) --}}
+    @include('partials.stat-counter')
 
     {{-- Active / online users --}}
     <section class="panel active-card">

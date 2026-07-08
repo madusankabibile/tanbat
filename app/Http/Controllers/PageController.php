@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
+use App\Models\Visitor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -114,6 +115,25 @@ class PageController extends Controller
             'stats'   => $stats,
             'active_users' => $activeUsers,
         ]);
+    }
+
+    /** GET /api/visitors — last 8 distinct visitors for the "Recent visitors" widget */
+    public function visitors(): JsonResponse
+    {
+        $visitors = Visitor::query()
+            ->orderByDesc('updated_at')
+            ->limit(8)
+            ->get(['country_code', 'country_name', 'page', 'referrer', 'updated_at'])
+            ->map(fn (Visitor $v) => [
+                'country_code' => $v->country_code ? strtolower($v->country_code) : null,
+                'country_name' => $v->country_name ?: 'Unknown',
+                'page'         => $v->page ?: '/',
+                // Show just the source host for external referrers; null => "Direct".
+                'referrer'     => $v->referrer ? (parse_url($v->referrer, PHP_URL_HOST) ?: $v->referrer) : null,
+                'when'         => $v->updated_at?->diffForHumans(null, true) . ' ago',
+            ]);
+
+        return response()->json(['visitors' => $visitors]);
     }
 
     /** Article view page */

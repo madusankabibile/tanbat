@@ -230,6 +230,7 @@ body > ins.adsbygoogle{display:block!important;}
       api: {
         categories:    {!! json_encode(url('/api/categories')) !!},
         sidebar:       {!! json_encode(url('/api/sidebar')) !!},
+        visitors:      {!! json_encode(url('/api/visitors')) !!},
         posts:         {!! json_encode(url('/api/posts')) !!},
         feed:            {!! json_encode(url('/api/feed')) !!},
         feedImpressions: {!! json_encode(url('/api/feed/impressions')) !!},

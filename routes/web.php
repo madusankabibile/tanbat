@@ -85,6 +85,7 @@ Route::prefix('auth')->name('auth.')->group(function () {
 Route::prefix('api')->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/sidebar',    [PageController::class, 'sidebar']);
+    Route::get('/visitors',   [PageController::class, 'visitors']);
     Route::get('/search/suggest', [SearchController::class, 'suggest']);
     Route::get('/search/results', [SearchController::class, 'results']);
 
