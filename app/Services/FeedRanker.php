@@ -145,14 +145,20 @@ class FeedRanker
                     WHERE acv.post_id = posts.id AND acv.country_code = ?) AS country_views',
                 [$viewerCountry]
             );
-            $q->orderByDesc('country_views')
-              ->orderByDesc('same_country');
+            // Blend the country-reading signal INTO the heat score instead of
+            // sorting on it first. Sorting on country_views first pinned every
+            // article with any local views above all image/video/status posts,
+            // so guests only ever saw articles. LOG() dampens runaway article
+            // view counts so a couple of viral articles don't monopolise the
+            // feed, while same-country authorship still gets a nudge.
+            $q->orderByRaw('(heat + LOG(country_views + 1) * 2.0 + same_country * 1.5) DESC')
+              ->orderByDesc('created_at');
+        } else {
+            $q->orderByDesc('heat')
+              ->orderByDesc('created_at');
         }
 
-        $rows = $q->orderByDesc('heat')
-            ->orderByDesc('created_at')
-            ->take($limit)
-            ->get();
+        $rows = $q->take($limit)->get();
 
         return [
             'posts'      => $rows,

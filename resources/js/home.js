@@ -103,7 +103,21 @@ async function loadNextBatch() {
   } finally {
     feedLoading = false;
     $('#feedNextLoading')?.classList.add('hidden');
+    // If the freshly rendered batch didn't make the page tall enough to
+    // scroll, immediately pull another — otherwise the scroll handler never
+    // fires and the feed is stuck. This is what left guests looking at only
+    // the first 3 cards: short article-preview cards don't fill the viewport.
+    requestAnimationFrame(ensureFeedFillsViewport);
   }
+}
+
+// Keep loading batches until the document is tall enough to scroll, so the
+// infinite-scroll handler has room to trigger. Naturally bounded: it stops
+// once the page overflows the viewport or the feed is exhausted.
+function ensureFeedFillsViewport() {
+  if (feedLoading || feedExhausted) return;
+  const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+  if (scrollable < 400) loadNextBatch();
 }
 
 function showEndOfFeed() {
