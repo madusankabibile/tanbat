@@ -8,7 +8,7 @@
     "name": "cards"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CHWxYJiR.css",
+    "file": "assets/app-CNbKTE9q.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -40,7 +40,7 @@
     "isEntry": true
   },
   "resources/js/book-show.js": {
-    "file": "assets/book-show-DWCjsPiV.js",
+    "file": "assets/book-show-CBQv9daH.js",
     "name": "book-show",
     "src": "resources/js/book-show.js",
     "isEntry": true,
@@ -55,7 +55,7 @@
     "isEntry": true
   },
   "resources/js/home.js": {
-    "file": "assets/home-CHq39geN.js",
+    "file": "assets/home-B0NKmldk.js",
     "name": "home",
     "src": "resources/js/home.js",
     "isEntry": true,
@@ -79,7 +79,7 @@
     ]
   },
   "resources/js/profile.js": {
-    "file": "assets/profile-CfXKBpIH.js",
+    "file": "assets/profile-Q8sHExpk.js",
     "name": "profile",
     "src": "resources/js/profile.js",
     "isEntry": true,

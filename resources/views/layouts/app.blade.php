@@ -203,6 +203,12 @@ body > ins.adsbygoogle{display:block!important;}
 
 @yield('content')
 
+{{-- Login / register modal — only for guests. Popped open by window.openAuthModal
+     when a guest tries to like or comment (see partials/auth-modal). --}}
+@guest
+  @include('partials.auth-modal')
+@endguest
+
 @php
   $authUser = auth()->user();
   $userPayload = $authUser ? [

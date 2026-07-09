@@ -849,7 +849,7 @@ function bindFeedClicks() {
 
 async function handleReact(card, reactionKey) {
   if (!card) return;
-  if (!APP.user) { toast('Sign in to react to posts', 'bad'); return; }
+  if (!APP.user) { window.openAuthModal ? window.openAuthModal('login') : toast('Sign in to react to posts', 'bad'); return; }
   const id = card.dataset.postId;
   const btn = card.querySelector('.btn-like');
   if (!id || !btn) return;
@@ -1349,7 +1349,7 @@ function syncModalReactionUI(reactionKey) {
 
 async function performModalReaction(reactionKey) {
   if (!currentPost) return;
-  if (!APP.user) return toast('Sign in to react to posts', 'bad');
+  if (!APP.user) { window.openAuthModal ? window.openAuthModal('login') : toast('Sign in to react to posts', 'bad'); return; }
   const mediaId = activeMediaId();
   const likesEl = $('#postLikes');
   try {
@@ -1426,6 +1426,11 @@ function bindCommentForm() {
   const form = $('#commentForm');
   const body = $('#commentBody');
   const submit = $('#commentSubmit');
+
+  // Guests: focusing the comment box pops the login/register modal instead.
+  if (!APP.user && window.openAuthModal) {
+    body.addEventListener('focus', () => { body.blur(); window.openAuthModal('login'); });
+  }
 
   // Auto-resize textarea
   body.addEventListener('input', () => {
@@ -1508,7 +1513,7 @@ function bindCommentForm() {
     const act = actBtn.dataset.commentAct;
     const id = actBtn.dataset.commentId;
     if (act === 'reply') {
-      if (!APP.user) { toast('Sign in to reply', 'bad'); return; }
+      if (!APP.user) { window.openAuthModal ? window.openAuthModal('login') : toast('Sign in to reply', 'bad'); return; }
       setReplyTarget(id, actBtn.dataset.commentUser);
     } else if (act === 'delete') {
       if (!confirm('Delete this comment?')) return;
@@ -1567,7 +1572,7 @@ function bindCommentForm() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentPost) return;
-    if (!APP.user) { toast('Sign in to comment', 'bad'); return; }
+    if (!APP.user) { window.openAuthModal ? window.openAuthModal('login') : toast('Sign in to comment', 'bad'); return; }
     const text = body.value.trim();
     if (!text && !pendingImage) { toast('Write something or attach an image', 'bad'); return; }
 

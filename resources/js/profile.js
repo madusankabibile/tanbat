@@ -444,7 +444,7 @@ function bindFeedClicks() {
 
 async function handleReact(card, reactionKey) {
   if (!card) return;
-  if (!APP.user) return toast('Sign in to react to posts', 'bad');
+  if (!APP.user) { window.openAuthModal ? window.openAuthModal('login') : toast('Sign in to react to posts', 'bad'); return; }
   const id = card.dataset.postId;
   const btn = card.querySelector('.btn-like');
   if (!id || !btn) return;
@@ -610,6 +610,7 @@ function bindCommentForm() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentPost) return;
+    if (!APP.user) { window.openAuthModal ? window.openAuthModal('login') : toast('Sign in to comment', 'bad'); return; }
     const body = $('#commentBody').value.trim();
     if (!body) return;
     try {

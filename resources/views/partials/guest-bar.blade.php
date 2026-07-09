@@ -9,12 +9,12 @@
     </a>
 
     <div class="ml-auto flex items-center gap-2">
-      <a href="{{ url('/') }}" class="hidden sm:inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-brand-600">
+      <button type="button" onclick="window.openAuthModal && window.openAuthModal('login')" class="hidden sm:inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-brand-600">
         Sign in
-      </a>
-      <a href="{{ url('/') }}" class="inline-flex items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-pop">
+      </button>
+      <button type="button" onclick="window.openAuthModal && window.openAuthModal('register')" class="inline-flex items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-pop">
         Create account
-      </a>
+      </button>
     </div>
   </div>
 </nav>

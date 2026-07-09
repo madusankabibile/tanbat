@@ -105,7 +105,9 @@
 
 </div>
 
-@include('partials.create-modals')
+@auth
+  @include('partials.create-modals')
+@endauth
 @include('partials.post-detail-modal')
 @include('partials.user-sheet')
 @include('partials.share-modal')

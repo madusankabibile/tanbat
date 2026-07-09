@@ -19,7 +19,7 @@ class PeopleController extends Controller
     public function page(): View|RedirectResponse
     {
         if (!Auth::check()) {
-            return redirect()->route('landing');
+            return redirect()->route('home');
         }
         return view('people');
     }

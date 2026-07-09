@@ -390,7 +390,7 @@
           </form>
         @else
           <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            <a href="{{ url('/') }}" class="font-semibold text-brand-600 hover:underline">Sign in</a> to leave a comment.
+            <button type="button" onclick="window.openAuthModal && window.openAuthModal('login')" class="font-semibold text-brand-600 hover:underline">Sign in</button> to leave a comment.
           </div>
         @endauth
 
@@ -599,7 +599,7 @@
   }
 
   async function react(reactionKey) {
-    if (!authed) { window.Tanbat?.toast?.('Sign in to react to this article', 'bad'); return; }
+    if (!authed) { window.openAuthModal ? window.openAuthModal('login') : window.Tanbat?.toast?.('Sign in to react to this article', 'bad'); return; }
     try {
       const r = await fetch(`${window.__APP__.urls.api.posts}/${postId}/like`, {
         method: 'POST',

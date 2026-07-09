@@ -15,7 +15,7 @@ class EnsureAdmin
         if (!$user) {
             return $request->expectsJson()
                 ? response()->json(['message' => 'Unauthenticated.'], 401)
-                : redirect()->route('landing');
+                : redirect()->route('home');
         }
 
         if (!method_exists($user, 'isAdmin') || !$user->isAdmin()) {

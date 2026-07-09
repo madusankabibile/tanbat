@@ -42,6 +42,20 @@
         <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
 
+      {{-- Guests: sign-in / register CTAs. Everything else in this cluster
+           (create, notifications, messages, profile) is member-only. --}}
+      @guest
+        <button type="button" onclick="window.openAuthModal && window.openAuthModal('login')"
+          class="rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+          Log in
+        </button>
+        <button type="button" onclick="window.openAuthModal && window.openAuthModal('register')"
+          class="flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-pop">
+          Sign up
+        </button>
+      @endguest
+
+      @auth
       {{-- Create dropdown --}}
       <div class="relative sm:mr-1" data-menu="create">
         <button type="button"
@@ -186,6 +200,7 @@
           </button>
         </div>
       </div>
+      @endauth
     </div>
   </div>
 

@@ -11,21 +11,13 @@ use Illuminate\Support\Facades\Auth;
 
 class PageController extends Controller
 {
-    /** Landing OR home, depending on auth state */
-    public function landing()
-    {
-        if (Auth::check()) {
-            return redirect()->route('home');
-        }
-        return view('landing');
-    }
-
-    /** Home feed (Pinterest masonry) */
+    /**
+     * Public home feed. Guests can browse the whole feed; liking and commenting
+     * trigger the login/register modal (wired client-side). There is no separate
+     * landing page any more — the root URL is the feed for everyone.
+     */
     public function home()
     {
-        if (!Auth::check()) {
-            return redirect()->route('landing');
-        }
         return view('home');
     }
 
@@ -39,7 +31,7 @@ class PageController extends Controller
     public function articleCreate()
     {
         if (!Auth::check()) {
-            return redirect()->route('landing');
+            return redirect()->route('home');
         }
         return view('article-create');
     }

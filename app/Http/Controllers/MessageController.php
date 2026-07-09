@@ -26,13 +26,13 @@ class MessageController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        if (!Auth::check()) return redirect()->route('landing');
+        if (!Auth::check()) return redirect()->route('home');
         return view('messages', ['peer' => null]);
     }
 
     public function show(User $user): View|RedirectResponse
     {
-        if (!Auth::check()) return redirect()->route('landing');
+        if (!Auth::check()) return redirect()->route('home');
         if ($user->id === Auth::id()) return redirect()->route('messages.index');
         // The legacy BabyBoss persona has been replaced by Tanbat Assistant.
         // Any "Message BabyBoss" link in the wild now lands on the wizard.

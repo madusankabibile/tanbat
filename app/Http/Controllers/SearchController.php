@@ -18,7 +18,7 @@ class SearchController extends Controller
     public function page(Request $request): View|\Illuminate\Http\RedirectResponse
     {
         if (!Auth::check()) {
-            return redirect()->route('landing');
+            return redirect()->route('home');
         }
         $q = trim((string) $request->query('q', ''));
         $tab = $request->query('tab', 'all');

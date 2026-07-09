@@ -37,11 +37,16 @@ use Illuminate\Support\Facades\Route;
 // browsers. See App\Http\Controllers\TaskRunnerController.
 Route::get('/tasks/run', [TaskRunnerController::class, 'run']);
 
-Route::get('/',                  [PageController::class, 'landing'])->name('landing');
+// Public home feed — guests can browse; liking/commenting prompts the auth
+// modal (share stays open to everyone). There is no separate landing page any
+// more: the root URL IS the feed for guests and members alike.
+Route::get('/',                  [PageController::class, 'home'])->name('home');
 // XML sitemap of the latest 50 articles. Registered here (before the root-level
 // /{username} route, whose charset also matches "sitemap.xml") so it resolves.
 Route::get('/sitemap.xml',       [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
-Route::get('/home',              [PageController::class, 'home'])->name('home');
+// Legacy /home path — kept as a public alias for the many internal url('/home')
+// links; serves the same feed as /.
+Route::get('/home',              [PageController::class, 'home'])->name('home.feed');
 Route::get('/privacy',           [PageController::class, 'privacy'])->name('privacy');
 Route::get('/articles/feed.xml', [ArticleFeedController::class, 'rss'])->name('articles.feed');
 Route::get('/articles/create',   [PageController::class, 'articleCreate'])->name('articles.create');
@@ -296,7 +301,7 @@ Route::get('/{username}/{section}', [UserController::class, 'show'])
 
 /*
 |--------------------------------------------------------------------------
-| Fallback — show landing for any other route
+| Fallback — show the public home feed for any other route
 |--------------------------------------------------------------------------
 */
-Route::fallback([PageController::class, 'landing']);
+Route::fallback([PageController::class, 'home']);

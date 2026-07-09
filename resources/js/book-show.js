@@ -38,7 +38,7 @@ function syncLikeButton(reactionKey, count) {
 }
 
 async function react(reactionKey) {
-  if (!APP.user) { toast('Sign in to react.', 'bad'); return; }
+  if (!APP.user) { window.openAuthModal ? window.openAuthModal('login') : toast('Sign in to react.', 'bad'); return; }
   const id = postId(); if (!id) return;
   const wrap = $('.reaction-wrap');
   // Close the popover after picking — same behaviour as the feed cards.
@@ -174,6 +174,7 @@ function bindCommentForm() {
   if (!form) return;
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!APP.user) { window.openAuthModal ? window.openAuthModal('login') : toast('Sign in to comment.', 'bad'); return; }
     const ta = $('#bkCommentBody');
     const text = (ta?.value || '').trim();
     if (!text) return;
