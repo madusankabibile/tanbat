@@ -146,6 +146,7 @@ class PageController extends Controller
                 'comments' => fn ($q) => $q->whereNull('parent_id')->with(['user', 'replies.user']),
             ])
             ->where('type', 'article')
+            ->where('is_legacy', false) // migrated blog articles live at /blogs/{id}/{slug}
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -160,6 +161,7 @@ class PageController extends Controller
         $tagIds = $post->tags->pluck('id')->all();
         $related = Post::with(['user:id,name,username,profile_picture', 'category:id,name'])
             ->where('type', 'article')
+            ->where('is_legacy', false)
             ->where('id', '!=', $post->id)
             ->where(function ($q) use ($post, $tagIds) {
                 if ($post->category_id) {

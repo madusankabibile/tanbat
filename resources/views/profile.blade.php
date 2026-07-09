@@ -398,6 +398,7 @@
 .post-badge.video    { background:#FEF2F2; color:#BE123C; }
 .post-badge.article  { background:#FEFCE8; color:#A16207; }
 .post-badge.book     { background:#F5F3FF; color:#6D28D9; }
+.post-badge.legacy   { background:#FEF3C7; color:#92400E; }
 .post-menu { margin-left:auto; height:32px; width:32px; border-radius:9999px; display:grid; place-items:center; color:#64748B; }
 .post-body { padding:4px 14px 12px; font-size:14px; color:#1E293B; line-height:1.55; word-break:break-word; }
 .post-media { background:#000; position:relative; }

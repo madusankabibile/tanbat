@@ -177,7 +177,7 @@ const w=window.__APP__,g=[{key:"like",emoji:"👍",label:"Like",color:"#2563EB"}
       ${t}
     </a>`:"";return`
     <article class="post-card article-card" data-post-id="${e.id}">
-      ${d(e,"article","Article")}
+      ${d(e,e.is_legacy?"legacy":"article",e.is_legacy?"Legacy":"Article")}
       ${s}
       <div class="article-meta">
         <a href="${i(e.view_url||"#")}" class="article-title block hover:text-brand-600">${i(e.title||"Untitled")}</a>

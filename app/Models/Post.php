@@ -22,10 +22,12 @@ class Post extends Model
         'status_text', 'bg_color', 'font_color',
         'description', 'is_adult', 'thumbnail', 'language',
         'embed_provider', 'embed_id',
+        'is_legacy', 'legacy_post_id',
     ];
 
     protected $casts = [
-        'is_adult' => 'boolean',
+        'is_adult'  => 'boolean',
+        'is_legacy' => 'boolean',
     ];
 
     protected $appends = ['featured_image_url', 'thumbnail_url', 'embed_url'];
@@ -106,7 +108,27 @@ class Post extends Model
 
     public function getFeaturedImageUrlAttribute(): ?string
     {
-        return $this->featured_image ? asset('storage/' . $this->featured_image) : null;
+        if (!$this->featured_image) {
+            return null;
+        }
+        // Legacy (migrated) articles store an absolute cover URL on the old
+        // uploads host; leave those untouched. New posts store a storage path.
+        return preg_match('~^https?://~i', $this->featured_image)
+            ? $this->featured_image
+            : asset('storage/' . $this->featured_image);
+    }
+
+    /** Canonical public URL for this post (legacy articles live at /blogs/{id}/{slug}). */
+    public function permalink(): string
+    {
+        if ($this->is_legacy && $this->legacy_post_id) {
+            return url('/blogs/' . $this->legacy_post_id . '/' . $this->slug);
+        }
+        return match ($this->type) {
+            'article' => url('/articles/' . $this->slug),
+            'book'    => url('/books/' . $this->slug),
+            default   => url('/home#post-' . $this->id),
+        };
     }
 
     public function getThumbnailUrlAttribute(): ?string

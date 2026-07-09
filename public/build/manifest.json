@@ -3,12 +3,12 @@
     "file": "assets/banners-C6x9FQL1.js",
     "name": "banners"
   },
-  "_cards-VsgYuqmm.js": {
-    "file": "assets/cards-VsgYuqmm.js",
+  "_cards-G04yePYr.js": {
+    "file": "assets/cards-G04yePYr.js",
     "name": "cards"
   },
   "resources/css/app.css": {
-    "file": "assets/app-BtLvIln5.css",
+    "file": "assets/app-DCjNGfs1.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -25,21 +25,21 @@
     "isEntry": true
   },
   "resources/js/assistant.js": {
-    "file": "assets/assistant-FLpNuThB.js",
+    "file": "assets/assistant-D7zBsmPK.js",
     "name": "assistant",
     "src": "resources/js/assistant.js",
     "isEntry": true,
     "imports": [
-      "_cards-VsgYuqmm.js"
+      "_cards-G04yePYr.js"
     ]
   },
   "resources/js/book-show.js": {
-    "file": "assets/book-show-DnQLHTit.js",
+    "file": "assets/book-show-DWCjsPiV.js",
     "name": "book-show",
     "src": "resources/js/book-show.js",
     "isEntry": true,
     "imports": [
-      "_cards-VsgYuqmm.js"
+      "_cards-G04yePYr.js"
     ]
   },
   "resources/js/books.js": {
@@ -49,12 +49,12 @@
     "isEntry": true
   },
   "resources/js/home.js": {
-    "file": "assets/home-DBSTwoxL.js",
+    "file": "assets/home-C7dd97D1.js",
     "name": "home",
     "src": "resources/js/home.js",
     "isEntry": true,
     "imports": [
-      "_cards-VsgYuqmm.js"
+      "_cards-G04yePYr.js"
     ]
   },
   "resources/js/messenger.js": {
@@ -73,12 +73,12 @@
     ]
   },
   "resources/js/profile.js": {
-    "file": "assets/profile-DyHzZ2vx.js",
+    "file": "assets/profile-Cjb34de0.js",
     "name": "profile",
     "src": "resources/js/profile.js",
     "isEntry": true,
     "imports": [
-      "_cards-VsgYuqmm.js",
+      "_cards-G04yePYr.js",
       "_banners-C6x9FQL1.js"
     ]
   },
@@ -101,7 +101,7 @@
     "isEntry": true
   },
   "resources/js/sidebars.js": {
-    "file": "assets/sidebars-CGxRAG_G.js",
+    "file": "assets/sidebars-D4kEGvYq.js",
     "name": "sidebars",
     "src": "resources/js/sidebars.js",
     "isEntry": true

@@ -190,6 +190,7 @@
 .post-badge.video    { background: #FEF2F2; color: #BE123C; }
 .post-badge.article  { background: #FEFCE8; color: #A16207; }
 .post-badge.book     { background: #F5F3FF; color: #6D28D9; }
+.post-badge.legacy   { background: #FEF3C7; color: #92400E; }
 
 /* ─────────── Book card ─────────── */
 .book-card .book-body {

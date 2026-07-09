@@ -554,7 +554,7 @@ function articleCard(p) {
     </a>` : '';
   return `
     <article class="post-card article-card" data-post-id="${p.id}">
-      ${headerHTML(p, 'article', 'Article')}
+      ${headerHTML(p, p.is_legacy ? 'legacy' : 'article', p.is_legacy ? 'Legacy' : 'Article')}
       ${figure}
       <div class="article-meta">
         <a href="${esc(p.view_url || '#')}" class="article-title block hover:text-brand-600">${esc(p.title || 'Untitled')}</a>

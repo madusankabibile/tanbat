@@ -720,7 +720,9 @@ class PostController extends Controller
                 'profile_picture' => $user->profile_picture
                     ? asset('storage/' . $user->profile_picture) : null,
             ] : null,
+            'is_legacy' => (bool) $p->is_legacy,
             'view_url' => match (true) {
+                $p->is_legacy && $p->legacy_post_id => url('/blogs/' . $p->legacy_post_id . '/' . $p->slug),
                 $p->type === 'article' => url('/articles/' . $p->slug),
                 $p->type === 'book' && $p->relationLoaded('bookDetail') && $p->bookDetail?->slug
                     => url('/books/' . $p->bookDetail->slug),

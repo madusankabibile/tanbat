@@ -9,7 +9,7 @@
     $ogImage  = $post->featured_image_url ?: optional($post->user)->avatarUrl();
     $ogDesc   = (string) \Illuminate\Support\Str::of(strip_tags((string) ($post->short_description ?: $post->body)))
                   ->squish()->limit(200);
-    $ogUrl    = route('articles.show', $post->slug);
+    $ogUrl    = $post->permalink();
     $authorNm = optional($post->user)->name ?: optional($post->user)->username;
     $authorUrl = optional($post->user)->username ? route('profile', $post->user->username) : null;
     $section  = optional($post->category)->name;
@@ -280,8 +280,18 @@
     {{-- ─────────────────────── MAIN ARTICLE ─────────────────────── --}}
     <article class="lg:col-span-7">
 
-      @if($cat)
-        <div class="mb-3"><span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-700">{{ $cat->name }}</span></div>
+      @if($cat || $post->is_legacy)
+        <div class="mb-3 flex flex-wrap items-center gap-2">
+          @if($cat)
+            <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-700">{{ $cat->name }}</span>
+          @endif
+          @if($post->is_legacy)
+            <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200" title="Originally published on the old Tanbat blog">
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+              Legacy
+            </span>
+          @endif
+        </div>
       @endif
 
       <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">{{ $post->title }}</h1>
@@ -473,7 +483,7 @@
                 $rUser = $r->user;
                 $rCat  = $r->category;
               @endphp
-              <a href="{{ route('articles.show', $r->slug) }}" class="rel-card">
+              <a href="{{ $r->permalink() }}" class="rel-card">
                 @if($r->featured_image_url)
                   <img src="{{ $r->featured_image_url }}" alt="">
                 @else
