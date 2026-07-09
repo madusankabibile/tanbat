@@ -246,7 +246,11 @@
 
 <script>
 (function(){
-  var APP = window.__APP__ || {};
+  // Read live at call time. This partial is included in the layout BEFORE the
+  // `window.__APP__ = {…}` script, so capturing it once here would freeze APP to
+  // {} — and then APP.urls.base would throw on submit, hanging the button spinner
+  // forever. A getter always sees the real config once the page has parsed.
+  function APP(){ return window.__APP__ || {}; }
   var T = window.Tanbat || (window.Tanbat = {});
   function toast(m,k){ (T.toast || function(){})(m,k); }
 
@@ -352,7 +356,7 @@
   // Where to send the user once authenticated. Prefer an explicit home
   // navigation (what the old landing login did) over location.reload() so a
   // stuck reload can't leave the spinner up.
-  function goAuthed(){ location.assign((APP.urls && APP.urls.home) || (APP.urls && APP.urls.base) || '/'); }
+  function goAuthed(){ var a=APP(); location.assign((a.urls && a.urls.home) || (a.urls && a.urls.base) || '/'); }
 
   // ── Login ──
   $('amLoginForm').addEventListener('submit', function(e){
@@ -361,9 +365,9 @@
     var v2=chk('amLPw','amLPwE',function(v){return v.length>0;});
     if(!v1||!v2) return;
     var btn=$('amBtnLogin'); busy(btn,true);
-    fetchT(APP.urls.base + '/auth/login',{
+    fetchT(APP().urls.base + '/auth/login',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':APP.csrf},
+      headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':APP().csrf},
       credentials:'same-origin',
       body:JSON.stringify({identifier:$('amLId').value.trim(),password:$('amLPw').value})
     }).then(function(res){ return res.json().catch(function(){return {success:false,message:'Server error ('+res.status+').'};}); })
@@ -400,9 +404,9 @@
     fd.append('username',$('amRUser').value.trim());
     fd.append('password',$('amRPw').value);
     fd.append('profile_picture',picFile);
-    fetchT(APP.urls.base + '/auth/register',{
+    fetchT(APP().urls.base + '/auth/register',{
       method:'POST',
-      headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':APP.csrf},
+      headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':APP().csrf},
       credentials:'same-origin',
       body:fd
     }, 40000).then(function(res){ return res.json().catch(function(){return {success:false,message:'Server error ('+res.status+').'};}); })
