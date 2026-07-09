@@ -38,7 +38,8 @@
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}  %{time_total}s  size %{size_download}\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/home)",
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/home)",
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/api/sidebar)",
-      "Bash(curl -s \"http://localhost/tanbat-xd/tanbat/home\")"
+      "Bash(curl -s \"http://localhost/tanbat-xd/tanbat/home\")",
+      "Bash(curl -s http://localhost/tanbat-xd/tanbat/articles/the-pricing-mistake-every-first-time-founder-makes-xv2oe)"
     ]
   }
 }

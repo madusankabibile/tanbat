@@ -327,6 +327,7 @@
       @endif
 
       <div class="prose-tanbat mt-10">{!! $post->body !!}</div>
+      @include('partials.mid-article-ad')
 
       @if($post->tags->count())
         <div class="mt-10 flex flex-wrap items-center gap-2">

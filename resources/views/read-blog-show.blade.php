@@ -143,6 +143,7 @@
       </div>
 
       <div class="prose-tanbat mt-10">{!! $article->body !!}</div>
+      @include('partials.mid-article-ad')
 
       @if(!empty($tags))
         <div class="mt-10 flex flex-wrap items-center gap-2">
