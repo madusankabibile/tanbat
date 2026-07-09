@@ -7,6 +7,8 @@
     $desc = \Illuminate\Support\Str::of(strip_tags((string) $article->body))->squish()->limit(200);
     $authorNm = $article->user?->name ?: ($article->author_name ?: $article->author_username);
     $authorUrl = $article->user?->username ? route('profile', $article->user->username) : null;
+    $authorAv = $article->user?->avatarUrl();
+    $authorInitial = strtoupper(mb_substr($authorNm ?: 'T', 0, 1));
     $tags = $article->tagList();
 
     $ld = array_filter([
@@ -63,6 +65,16 @@
   .prose-tanbat ul,.prose-tanbat ol{padding-left:1.4em; margin:1em 0;} .prose-tanbat li{margin:.35em 0;}
   .prose-tanbat table{max-width:100%; overflow-x:auto; display:block; border-collapse:collapse;}
   .prose-tanbat iframe{max-width:100%;}
+
+  .rail-btn { display:grid; place-items:center; width:44px; height:44px; border-radius:14px; background:#fff; border:1px solid #E2E8F0; color:#475569; transition:transform .15s, box-shadow .15s, color .15s, border-color .15s; }
+  .rail-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(108,99,255,.12); color:#6C63FF; border-color:#C5C9FF; }
+  .rail-count { display:block; margin-top:4px; font-size:11px; font-weight:700; color:#64748b; text-align:center; }
+
+  .rel-card { display:flex; gap:10px; padding:10px; border-radius:14px; transition:background .15s, transform .15s; }
+  .rel-card:hover { background:#F7F8FF; transform:translateX(2px); }
+  .rel-card .rel-ph { width:64px; height:64px; border-radius:10px; object-fit:cover; flex-shrink:0; background:linear-gradient(135deg,#EEF0FF,#FFE4EC); }
+
+  .ad-slot { position:relative; border-radius:16px; border:1px dashed #C5C9FF; background:repeating-linear-gradient(135deg,#F7F8FF 0 12px,#EEF0FF 12px 24px); min-height:260px; display:grid; place-items:center; color:#6C63FF; font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
 </style>
 @endpush
 
@@ -73,75 +85,176 @@
   @includeIf('partials.guest-bar')
 @endauth
 
-<main class="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
-  <nav class="mb-6 text-sm text-slate-500">
-    <a href="{{ url('/') }}" class="hover:text-brand-600">Home</a>
-    <span class="mx-1.5 text-slate-300">/</span>
-    <span>Blog</span>
-    @if($article->category_name)
-      <span class="mx-1.5 text-slate-300">/</span>
-      <span class="text-slate-700">{{ $article->category_name }}</span>
-    @endif
-  </nav>
+@php
+  $shareUrl = $canonical;
+  $shareText = $article->title;
+@endphp
 
-  <article>
-    @if($article->category_name)
-      <div class="mb-3"><span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-700">{{ $article->category_name }}</span></div>
-    @endif
+<div class="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
 
-    <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">{{ $article->title }}</h1>
+  <a href="{{ url('/home') }}" class="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-brand-600">
+    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Back to feed
+  </a>
 
-    <div class="mt-5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-      @if($authorNm)
-        @if($authorUrl)
-          <a href="{{ $authorUrl }}" class="font-semibold text-slate-700 hover:text-brand-600">{{ $authorNm }}</a>
-        @else
-          <span class="font-semibold text-slate-700">{{ $authorNm }}</span>
-        @endif
-        <span class="text-slate-300">·</span>
-      @endif
-      @if($article->published_at)
-        <time datetime="{{ $article->published_at->toIso8601String() }}">{{ $article->published_at->format('M j, Y') }}</time>
-        <span class="text-slate-300">·</span>
-      @endif
-      <span>{{ number_format($article->views) }} views</span>
-    </div>
+  <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
 
-    @if($coverUrl)
-      <img src="{{ $coverUrl }}" class="mt-8 w-full rounded-2xl object-cover shadow-card" alt="{{ $article->title }}" loading="lazy">
-    @endif
+    {{-- ─────────────────────── LEFT PANEL ─────────────────────── --}}
+    <aside class="hidden lg:col-span-2 lg:block">
+      <div class="sticky top-24 space-y-4">
 
-    <div class="prose-tanbat mt-10">{!! $article->body !!}</div>
+        {{-- Author mini-card --}}
+        <div class="card p-4 text-center">
+          @if($authorAv)
+            <img src="{{ $authorAv }}" class="mx-auto h-16 w-16 rounded-full object-cover ring-2 ring-brand-500" alt="">
+          @else
+            <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-bold text-white ring-2 ring-brand-500">{{ $authorInitial }}</span>
+          @endif
+          <div class="mt-2 truncate text-sm font-bold text-slate-900">{{ $authorNm ?: 'Tanbat' }}</div>
+          <div class="truncate text-xs text-slate-500">{{ $article->user?->username ? '@'.$article->user->username : 'Editorial' }}</div>
+          <a href="{{ $authorUrl ?: url('/home') }}" class="mt-3 inline-block w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-brand-400 hover:text-brand-600">{{ $authorUrl ? 'View profile' : 'Explore Tanbat' }}</a>
+        </div>
 
-    @if(!empty($tags))
-      <div class="mt-10 flex flex-wrap items-center gap-2">
-        @foreach($tags as $t)
-          <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">#{{ $t }}</span>
-        @endforeach
-      </div>
-    @endif
-  </article>
-
-  @if($related->isNotEmpty())
-    <section class="mt-14 border-t border-slate-100 pt-8">
-      <h2 class="mb-4 text-lg font-bold text-slate-900">Related articles</h2>
-      <div class="grid gap-3 sm:grid-cols-2">
-        @foreach($related as $r)
-          <a href="{{ route('legacy.article', ['postId' => $r->old_post_id, 'slug' => $r->slug]) }}"
-             class="flex gap-3 rounded-xl p-2 transition hover:bg-slate-50">
-            @if($r->cover)
-              <img src="{{ (\App\Models\LegacyArticle::make(['cover' => $r->cover]))->coverUrl() }}" class="h-16 w-16 flex-shrink-0 rounded-lg object-cover" alt="" loading="lazy">
-            @else
-              <span class="h-16 w-16 flex-shrink-0 rounded-lg bg-gradient-to-br from-brand-50 to-rose-50"></span>
-            @endif
-            <span class="min-w-0">
-              <span class="line-clamp-2 text-sm font-semibold text-slate-800">{{ $r->title }}</span>
-              @if($r->published_at)<span class="mt-1 block text-xs text-slate-400">{{ $r->published_at->format('M j, Y') }}</span>@endif
-            </span>
+        {{-- Share rail --}}
+        <div class="card flex flex-col items-center gap-4 py-5">
+          <button type="button" id="copyLinkRail" class="rail-btn" aria-label="Copy link" title="Copy link">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </button>
+          <a href="https://twitter.com/intent/tweet?url={{ urlencode($shareUrl) }}&text={{ urlencode($shareText) }}" target="_blank" rel="noopener" class="rail-btn" aria-label="Share on X" title="Share on X">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.84l-5.36-6.4L4.66 22H1.4l8.04-9.18L1 2h7.04l4.86 5.85L18.244 2zm-2.4 18h1.86L7.32 4H5.36l10.484 16z"/></svg>
           </a>
-        @endforeach
+          <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode($shareUrl) }}" target="_blank" rel="noopener" class="rail-btn" aria-label="Share on Facebook" title="Share on Facebook">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 10-11.56 9.88V14.9H7.9V12h2.54V9.8c0-2.5 1.5-3.9 3.78-3.9 1.1 0 2.25.2 2.25.2v2.47h-1.27c-1.25 0-1.64.78-1.64 1.57V12h2.8l-.45 2.9h-2.35v6.98A10 10 0 0022 12z"/></svg>
+          </a>
+          <a href="https://api.whatsapp.com/send?text={{ urlencode($shareText.' '.$shareUrl) }}" target="_blank" rel="noopener" class="rail-btn" aria-label="Share on WhatsApp" title="Share on WhatsApp">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.52 3.48A11.86 11.86 0 0012.04 0C5.4 0 .07 5.32.07 11.95c0 2.1.55 4.16 1.6 5.97L0 24l6.27-1.64a11.94 11.94 0 005.76 1.47h.01c6.62 0 12-5.32 12-11.95 0-3.2-1.25-6.2-3.52-8.4zM12.04 21.8h-.01a9.92 9.92 0 01-5.06-1.38l-.36-.22-3.72.97 1-3.62-.24-.37a9.93 9.93 0 01-1.52-5.23c0-5.49 4.47-9.95 9.96-9.95a9.93 9.93 0 017.04 2.92 9.91 9.91 0 012.92 7.04c0 5.5-4.46 9.96-9.96 9.96z"/></svg>
+          </a>
+          <span class="rail-count">Share</span>
+        </div>
+
       </div>
-    </section>
-  @endif
-</main>
+    </aside>
+
+    {{-- ─────────────────────── MAIN ARTICLE ─────────────────────── --}}
+    <article class="lg:col-span-7">
+
+      <div class="mb-3 flex flex-wrap items-center gap-2">
+        @if($article->category_name)
+          <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-700">{{ $article->category_name }}</span>
+        @endif
+        <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200" title="Originally published on the old Tanbat blog">
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+          Legacy
+        </span>
+      </div>
+
+      <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">{{ $article->title }}</h1>
+
+      <div class="mt-6 flex flex-wrap items-center gap-3">
+        @if($authorAv)
+          <img src="{{ $authorAv }}" class="h-11 w-11 rounded-full object-cover ring-2 ring-brand-500 lg:hidden" alt="">
+        @else
+          <span class="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-sm font-bold text-white ring-2 ring-brand-500 lg:hidden">{{ $authorInitial }}</span>
+        @endif
+        <div class="min-w-0">
+          @if($authorNm)
+            <div class="text-sm font-semibold text-slate-900 lg:hidden">{{ $authorNm }}</div>
+          @endif
+          <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            @if($article->published_at)
+              <time datetime="{{ $article->published_at->toIso8601String() }}">{{ $article->published_at->format('M j, Y') }}</time>
+              <span class="text-slate-300">·</span>
+            @endif
+            <span>{{ number_format($article->views) }} views</span>
+          </div>
+        </div>
+      </div>
+
+      @if($coverUrl)
+        <img src="{{ $coverUrl }}" class="mt-8 w-full rounded-2xl object-cover shadow-card" alt="{{ $article->title }}" loading="lazy">
+      @endif
+
+      <div class="prose-tanbat mt-10">{!! $article->body !!}</div>
+
+      @if(!empty($tags))
+        <div class="mt-10 flex flex-wrap items-center gap-2">
+          @foreach($tags as $t)
+            <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">#{{ $t }}</span>
+          @endforeach
+        </div>
+      @endif
+
+      {{-- Mobile share row (left rail is hidden on small screens) --}}
+      <div class="mt-10 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-card lg:hidden">
+        <span class="text-sm font-semibold text-slate-700">Share this article</span>
+        <div class="flex items-center gap-2">
+          <button type="button" id="copyLinkMobile" class="rail-btn !h-10 !w-10" aria-label="Copy link">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </button>
+          <a href="https://api.whatsapp.com/send?text={{ urlencode($shareText.' '.$shareUrl) }}" target="_blank" rel="noopener" class="rail-btn !h-10 !w-10" aria-label="Share on WhatsApp">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20.52 3.48A11.86 11.86 0 0012.04 0C5.4 0 .07 5.32.07 11.95c0 2.1.55 4.16 1.6 5.97L0 24l6.27-1.64a11.94 11.94 0 005.76 1.47h.01c6.62 0 12-5.32 12-11.95 0-3.2-1.25-6.2-3.52-8.4z"/></svg>
+          </a>
+        </div>
+      </div>
+
+    </article>
+
+    {{-- ─────────────────────── RIGHT PANEL ─────────────────────── --}}
+    <aside class="lg:col-span-3">
+      <div class="sticky top-24 space-y-6">
+
+        <div class="ad-slot">
+          @include('partials.ad-banner')
+        </div>
+
+        {{-- Related articles --}}
+        <div class="card overflow-hidden">
+          <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <h3 class="text-sm font-bold text-slate-900">Related articles</h3>
+            <a href="{{ url('/blog') }}" class="text-xs font-semibold text-brand-600 hover:underline">More</a>
+          </div>
+          <div class="divide-y divide-slate-100">
+            @forelse($related as $r)
+              <a href="{{ route('legacy.article', ['postId' => $r->old_post_id, 'slug' => $r->slug]) }}" class="rel-card">
+                @if($r->cover)
+                  <img src="{{ (\App\Models\LegacyArticle::make(['cover' => $r->cover]))->coverUrl() }}" class="rel-ph" alt="" loading="lazy">
+                @else
+                  <div class="rel-ph grid place-items-center text-brand-500">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                @endif
+                <div class="min-w-0 flex-1">
+                  <div class="line-clamp-2 text-sm font-semibold text-slate-900">{{ $r->title }}</div>
+                  @if($r->published_at)
+                    <div class="mt-1 text-[11px] text-slate-500">{{ $r->published_at->format('M j, Y') }}</div>
+                  @endif
+                </div>
+              </a>
+            @empty
+              <div class="px-4 py-8 text-center text-xs text-slate-500">No related articles yet.</div>
+            @endforelse
+          </div>
+        </div>
+
+        @includeIf('partials.stat-counter')
+
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+@push('scripts')
+<script>
+(() => {
+  const shareUrl = @json($shareUrl);
+  async function copy() {
+    try { await navigator.clipboard.writeText(shareUrl); window.Tanbat?.toast?.('Link copied!', 'ok'); }
+    catch { window.Tanbat?.toast?.('Could not copy link', 'bad'); }
+  }
+  document.getElementById('copyLinkRail')?.addEventListener('click', copy);
+  document.getElementById('copyLinkMobile')?.addEventListener('click', copy);
+})();
+</script>
+@endpush
 @endsection

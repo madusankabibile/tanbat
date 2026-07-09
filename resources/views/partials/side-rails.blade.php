@@ -21,7 +21,22 @@
       <svg class="saved-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
     @endif
+    @endauth
 
+    {{-- Guests get a join card in place of the member-only saved/people panels. --}}
+    @guest
+    <div class="panel join-card">
+      <div class="join-orb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+      </div>
+      <div class="join-title">Join Tanbat</div>
+      <div class="join-sub">Sign in to like, comment, save posts and follow people.</div>
+      <button type="button" onclick="window.openAuthModal && window.openAuthModal('register')" class="join-btn">Create free account</button>
+      <button type="button" onclick="window.openAuthModal && window.openAuthModal('login')" class="join-link">I already have an account</button>
+    </div>
+    @endguest
+
+    {{-- Public shortcuts — shown to everyone (guest + member). --}}
     {{-- Tanbat Assistant CTA — wizard for finding books (and, soon, other resources) --}}
     <a href="{{ url('/assistant') }}" class="panel assist-cta {{ request()->is('assistant') ? 'is-active' : '' }}">
       <span class="assist-orb">
@@ -58,7 +73,8 @@
       <svg class="saved-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
     </a>
 
-    {{-- Discover People CTA --}}
+    {{-- Discover People CTA — the People page requires an account, so members only. --}}
+    @auth
     <a href="{{ url('/discover/people') }}" class="panel people-cta {{ request()->is('discover/people') ? 'is-active' : '' }}">
       <span class="people-orb">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -204,6 +220,31 @@
 .assist-cta.is-active, .books-cta.is-active { background: linear-gradient(135deg,#FFFFFF 0%,#F5F3FF 100%); border-color: #C5C9FF; }
 .assist-cta.is-active .assist-text strong,
 .books-cta.is-active  .books-text strong { color: #5A52D5; }
+
+/* ── Guest "Join Tanbat" card ── */
+.join-card {
+  padding: 18px 16px 16px; text-align: center;
+  background: linear-gradient(160deg,#FFFFFF 0%,#F5F3FF 100%);
+  border-color: #E5E1FF;
+}
+.join-card .join-orb {
+  height: 44px; width: 44px; margin: 0 auto 10px; border-radius: 14px;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg,#6C63FF,#FF6584);
+  box-shadow: 0 8px 20px rgba(108,99,255,.32);
+}
+.join-card .join-orb svg { width: 22px; height: 22px; }
+.join-card .join-title { font-size: 15px; font-weight: 800; color: #1E1B4B; }
+.join-card .join-sub { margin-top: 4px; font-size: 12px; color: #64748B; line-height: 1.5; }
+.join-card .join-btn {
+  margin-top: 12px; width: 100%; padding: 9px 12px; border-radius: 10px;
+  background: linear-gradient(135deg,#6C63FF,#5A52D5); color: #fff;
+  font-size: 13px; font-weight: 700; box-shadow: 0 6px 16px rgba(108,99,255,.3);
+  transition: transform .12s, box-shadow .12s;
+}
+.join-card .join-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(108,99,255,.4); }
+.join-card .join-link { margin-top: 8px; width: 100%; font-size: 12px; font-weight: 600; color: #6C63FF; }
+.join-card .join-link:hover { text-decoration: underline; }
 
 .left-footer { font-size: 11px; color: #94A3B8; padding: 8px 4px 0; line-height: 1.7; }
 .left-footer a { color: #94A3B8; }
