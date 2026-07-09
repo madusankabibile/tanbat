@@ -336,6 +336,24 @@
 
   function busy(btn,on,label){ btn.disabled=on; btn.innerHTML = on ? '<span class="am-spin"></span>' : label; }
 
+  // fetch with a hard timeout so the submit button can NEVER spin forever if the
+  // network/request hangs. Aborts after `ms` and rejects, which the callers turn
+  // into a reset button + error toast.
+  function fetchT(url, opts, ms){
+    ms = ms || 20000;
+    if (typeof AbortController === 'undefined') return fetch(url, opts);
+    var c = new AbortController();
+    var timer = setTimeout(function(){ c.abort(); }, ms);
+    var merged = {}; for (var k in opts) merged[k] = opts[k]; merged.signal = c.signal;
+    return fetch(url, merged).then(function(r){ clearTimeout(timer); return r; },
+                                   function(err){ clearTimeout(timer); throw err; });
+  }
+
+  // Where to send the user once authenticated. Prefer an explicit home
+  // navigation (what the old landing login did) over location.reload() so a
+  // stuck reload can't leave the spinner up.
+  function goAuthed(){ location.assign((APP.urls && APP.urls.home) || (APP.urls && APP.urls.base) || '/'); }
+
   // ── Login ──
   $('amLoginForm').addEventListener('submit', function(e){
     e.preventDefault();
@@ -343,18 +361,21 @@
     var v2=chk('amLPw','amLPwE',function(v){return v.length>0;});
     if(!v1||!v2) return;
     var btn=$('amBtnLogin'); busy(btn,true);
-    fetch(APP.urls.base + '/auth/login',{
+    fetchT(APP.urls.base + '/auth/login',{
       method:'POST',
       headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':APP.csrf},
       credentials:'same-origin',
       body:JSON.stringify({identifier:$('amLId').value.trim(),password:$('amLPw').value})
     }).then(function(res){ return res.json().catch(function(){return {success:false,message:'Server error ('+res.status+').'};}); })
       .then(function(data){
-        if(data.success){ location.reload(); return; }
+        if(data.success){ goAuthed(); return; }
         busy(btn,false,'Sign In');
         bad('amLPw','amLPwE',data.message||'Invalid credentials.');
         toast(data.message||'Invalid credentials.','bad');
-      }).catch(function(){ busy(btn,false,'Sign In'); toast('Connection error.','bad'); });
+      }).catch(function(err){
+        busy(btn,false,'Sign In');
+        toast(err && err.name === 'AbortError' ? 'Request timed out — please try again.' : 'Connection error.','bad');
+      });
   });
 
   // ── Register ──
@@ -379,18 +400,21 @@
     fd.append('username',$('amRUser').value.trim());
     fd.append('password',$('amRPw').value);
     fd.append('profile_picture',picFile);
-    fetch(APP.urls.base + '/auth/register',{
+    fetchT(APP.urls.base + '/auth/register',{
       method:'POST',
       headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':APP.csrf},
       credentials:'same-origin',
       body:fd
-    }).then(function(res){ return res.json().catch(function(){return {success:false,message:'Server error ('+res.status+').'};}); })
+    }, 40000).then(function(res){ return res.json().catch(function(){return {success:false,message:'Server error ('+res.status+').'};}); })
       .then(function(data){
-        if(data.success){ toast('Welcome, '+(data.user&&data.user.name?data.user.name:'')+'!','ok'); setTimeout(function(){location.reload();},600); return; }
+        if(data.success){ toast('Welcome, '+(data.user&&data.user.name?data.user.name:'')+'!','ok'); setTimeout(goAuthed,600); return; }
         busy(btn,false,'Create account');
         applyServerErrors(data.errors);
         toast(data.message||'Registration failed.','bad');
-      }).catch(function(){ busy(btn,false,'Create account'); toast('Connection error.','bad'); });
+      }).catch(function(err){
+        busy(btn,false,'Create account');
+        toast(err && err.name === 'AbortError' ? 'Request timed out — please try again.' : 'Connection error.','bad');
+      });
   });
 })();
 </script>
