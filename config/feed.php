@@ -99,6 +99,29 @@ return [
     // demographic.same_country_weight above.
     'same_country_multiplier' => 1.35,
 
+    // Multiplicative boost for content that readers from the VIEWER'S country
+    // actually open the most — sourced from the per-country view table
+    // (article_country_views, populated on article page views; see
+    // App\Services\ArticleGeoViews and the /blog geo ranking). This is distinct
+    // from same_country_multiplier above: that rewards the author's country,
+    // this rewards "people in your country keep reading this", regardless of who
+    // wrote it. The boost scales with how much the viewer's country reads a
+    // post: multiplier ~1 at zero local views, approaching `multiplier` once
+    // local views reach `saturation`. Only article posts currently carry this
+    // signal, so in practice it lifts locally-popular articles in the feed.
+    'country_view_boost' => [
+        'multiplier' => 1.8,   // max multiplicative factor at/above saturation
+        'saturation' => 40,    // local views where the boost is ~fully applied
+    ],
+
+    // Seed the candidate pool with up to this many articles that the viewer's
+    // country reads the most (top by article_country_views for their country),
+    // on top of the normal recency/engagement streams. Without this, an article
+    // that's popular in the viewer's country but too old for the recency window
+    // would never enter the pool, so the country_view_boost above could never
+    // surface it. 0 disables the top-up (boost still applies to in-pool posts).
+    'country_favorites_topup' => 25,
+
     // Multiplicative score factor for posts by automated/system accounts
     // (config/bots.php). <1 pushes bot content below genuine members' posts.
     // Applied last in scorePost (after every boost) so it can't be undone.

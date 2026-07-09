@@ -137,7 +137,7 @@ class PageController extends Controller
     }
 
     /** Article view page */
-    public function articleShow(string $slug)
+    public function articleShow(string $slug, \Illuminate\Http\Request $request, \App\Services\ArticleGeoViews $geoViews)
     {
         $post = Post::with([
                 'user',
@@ -153,6 +153,9 @@ class PageController extends Controller
         // Count this visit. views_count also bumps on feed impressions
         // (InteractionRecorder); opening/refreshing the article adds to it too.
         $post->increment('views_count');
+        // Attribute the view to the visitor's country for the /blog "For you"
+        // geo-ranking (article_country_views). No-op if IP can't be geolocated.
+        $geoViews->record($post->id, $request);
 
         $myReaction = Auth::check() ? $post->reactionBy(Auth::id()) : null;
         $liked = $myReaction !== null;

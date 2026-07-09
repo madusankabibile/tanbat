@@ -46,6 +46,18 @@
       <svg class="saved-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
     </a>
 
+    {{-- Blog CTA --}}
+    <a href="{{ url('/blog') }}" class="panel books-cta {{ request()->is('blog') ? 'is-active' : '' }}">
+      <span class="books-orb" style="background:linear-gradient(135deg,#6C63FF,#A78BFA);box-shadow:0 6px 16px rgba(108,99,255,.28);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M8 7h8M8 11h6"/></svg>
+      </span>
+      <span class="books-text">
+        <strong>Blog</strong>
+        <span class="books-sub-text">Articles picked for your country</span>
+      </span>
+      <svg class="saved-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
     {{-- Discover People CTA --}}
     <a href="{{ url('/discover/people') }}" class="panel people-cta {{ request()->is('discover/people') ? 'is-active' : '' }}">
       <span class="people-orb">

@@ -31,14 +31,14 @@ class LegacyArticleController extends Controller
             ->first();
 
         if ($post) {
-            return $this->showPost($post, $slug);
+            return $this->showPost($post, $slug, $request);
         }
 
         return $this->showFromLegacyTable($postId, $slug);
     }
 
     /** Render a legacy article that exists as a native post. */
-    private function showPost(Post $post, ?string $slug)
+    private function showPost(Post $post, ?string $slug, Request $request)
     {
         // Canonical slug redirect (301) — one indexable URL per article.
         if ($slug !== $post->slug && $post->slug !== '') {
@@ -49,6 +49,8 @@ class LegacyArticleController extends Controller
         }
 
         $post->increment('views_count');
+        // Attribute the view to the visitor's country for /blog geo-ranking.
+        app(\App\Services\ArticleGeoViews::class)->record($post->id, $request);
 
         $myReaction = Auth::check() ? $post->reactionBy(Auth::id()) : null;
 

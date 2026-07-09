@@ -89,6 +89,9 @@ Route::redirect('/boss',         '/assistant');
 // Legacy library search page → the new Books page (301 for SEO).
 Route::permanentRedirect('/library_search.php', '/books');
 Route::get('/search',            [SearchController::class, 'page'])->name('search');
+// Public blog index — geo/hot/new ranked article cards. Guest-accessible.
+// See App\Http\Controllers\BlogController.
+Route::get('/blog',              [\App\Http\Controllers\BlogController::class, 'page'])->name('blog');
 Route::get('/discover/people',   [PeopleController::class, 'page'])->name('people');
 Route::get('/users/feed.xml',    [UserFeedController::class, 'rss'])->name('users.feed');
 Route::get('/assistant',         [AssistantController::class, 'page'])->name('assistant');
@@ -124,6 +127,9 @@ Route::prefix('api')->group(function () {
 
     // Public suggested-people list for the "account deleted" recovery page.
     Route::get('/discover/suggested', [PeopleController::class, 'suggested']);
+
+    // Public blog feed — geo/hot/new ranked article cards for the /blog page.
+    Route::get('/blog/feed', [\App\Http\Controllers\BlogController::class, 'feed']);
 
     // Tanbat Assistant is public end-to-end — guests can search the library and
     // queue a book request; guest requests are attributed to a shared anonymous

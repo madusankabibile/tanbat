@@ -33,6 +33,12 @@
       "_cards-G04yePYr.js"
     ]
   },
+  "resources/js/blog.js": {
+    "file": "assets/blog-C0rOw2fi.js",
+    "name": "blog",
+    "src": "resources/js/blog.js",
+    "isEntry": true
+  },
   "resources/js/book-show.js": {
     "file": "assets/book-show-DWCjsPiV.js",
     "name": "book-show",

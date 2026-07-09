@@ -59,14 +59,14 @@ class FeedRanker
         $coldStart = $interactionCount < (int) config('feed.cold_start_threshold');
 
         // First pass: strict filters (no seen, no engaged, no session-loaded).
-        $candidates = $this->candidates($user, $coldStart, relax: false, excludeIds: $excludeIds);
+        $candidates = $this->candidates($user, $coldStart, relax: false, excludeIds: $excludeIds, viewerCountry: $viewerCountry);
         $recycled = false;
 
         // Fallback tier: when the strict pool is exhausted, drop the "already seen"
         // and "already engaged" filters — but ALWAYS keep $excludeIds (session-loaded)
         // so the same card never appears twice in one scroll session.
         if ($candidates->isEmpty()) {
-            $candidates = $this->candidates($user, $coldStart, relax: true, excludeIds: $excludeIds);
+            $candidates = $this->candidates($user, $coldStart, relax: true, excludeIds: $excludeIds, viewerCountry: $viewerCountry);
             $recycled = $candidates->isNotEmpty();
         }
 
@@ -77,13 +77,17 @@ class FeedRanker
 
         $affinityIndex = $this->loadAffinity($user->id);
         $followIndex   = $this->loadFollowGraph($user->id);
+        // How much the viewer's country reads each candidate (per-country view
+        // table). Drives the country_view_boost so posts people in the viewer's
+        // country keep opening surface more, regardless of who authored them.
+        $countryViews  = $this->loadCountryViews($viewerCountry, $candidates->pluck('id')->all());
 
         $botIds            = $this->botUserIds();
         $prioritizeMembers = (bool) config('feed.prioritize_members');
         $memberTierBonus   = (float) config('feed.member_tier_bonus');
 
-        $scored = $candidates->map(function (Post $p) use ($user, $affinityIndex, $followIndex, $coldStart, $viewerCountry, $botIds, $prioritizeMembers, $memberTierBonus) {
-            $p->_score = $this->scorePost($p, $user, $affinityIndex, $followIndex, $coldStart, $viewerCountry);
+        $scored = $candidates->map(function (Post $p) use ($user, $affinityIndex, $followIndex, $coldStart, $viewerCountry, $countryViews, $botIds, $prioritizeMembers, $memberTierBonus) {
+            $p->_score = $this->scorePost($p, $user, $affinityIndex, $followIndex, $coldStart, $viewerCountry, $countryViews);
             // Member-first tier: lift every genuine member post above all bots,
             // preserving new/hot order within the member tier.
             if ($prioritizeMembers && !in_array($p->user_id, $botIds, true)) {
@@ -127,12 +131,22 @@ class FeedRanker
             ->where('type', '!=', 'book');
         if (!empty($excludeIds)) $q->whereNotIn('id', $excludeIds);
 
-        // Prefer posts from the viewer's own country (resolved from their IP).
+        // Prefer posts from the viewer's own country (resolved from their IP),
+        // and — more strongly — content that readers in the viewer's country
+        // actually open the most (per-country view table). The latter leads so
+        // guests, like members, get "what your country reads" surfaced first.
         if ($viewerCountry) {
             $q->selectRaw(
                 '(SELECT au.country FROM users au WHERE au.id = posts.user_id) = ? AS same_country',
                 [$viewerCountry]
-            )->orderByDesc('same_country');
+            );
+            $q->selectRaw(
+                '(SELECT COALESCE(acv.views, 0) FROM article_country_views acv
+                    WHERE acv.post_id = posts.id AND acv.country_code = ?) AS country_views',
+                [$viewerCountry]
+            );
+            $q->orderByDesc('country_views')
+              ->orderByDesc('same_country');
         }
 
         $rows = $q->orderByDesc('heat')
@@ -158,7 +172,7 @@ class FeedRanker
      * "already engaged" filters and widen the recency window — used when
      * the strict pool is empty so the user always gets *something* to scroll.
      */
-    private function candidates(User $user, bool $coldStart, bool $relax = false, array $excludeIds = []): Collection
+    private function candidates(User $user, bool $coldStart, bool $relax = false, array $excludeIds = [], ?string $viewerCountry = null): Collection
     {
         $poolSize = (int) config('feed.candidate_pool_size');
         $ttlDays  = (int) config('feed.impression_ttl_days');
@@ -287,6 +301,38 @@ class FeedRanker
             $candidates = $candidates->concat($memberPosts)->unique('id')->values();
         }
 
+        // Seed with the articles the viewer's country reads most, even if they're
+        // older than the recency window — otherwise the country_view_boost in
+        // scorePost could never surface an evergreen locally-popular article
+        // because it would never make it into the candidate pool. This stream is
+        // a clone of $query, so it inherits every exclusion above (hidden, seen,
+        // engaged, session-loaded, own posts, adult, broken-card filters).
+        $localTopUp = (int) config('feed.country_favorites_topup', 25);
+        if ($viewerCountry && $localTopUp > 0) {
+            // Resolve the most-read-in-country article IDs first, then pull them
+            // through a clone of $query (whereIn, no join) so we inherit every
+            // exclusion above without making the unqualified `id`/`user_id`
+            // filters ambiguous. Over-fetch a little because some IDs will be
+            // filtered out by the seen/engaged/render exclusions. Final ranking
+            // is handled by the country_view_boost in scorePost, so pool order
+            // here doesn't matter.
+            $faveIds = DB::table('article_country_views')
+                ->where('country_code', $viewerCountry)
+                ->where('views', '>', 0)
+                ->orderByDesc('views')
+                ->limit($localTopUp * 2)
+                ->pluck('post_id')
+                ->all();
+
+            if (!empty($faveIds)) {
+                $localFaves = (clone $query)
+                    ->whereIn('id', $faveIds)
+                    ->take($localTopUp)
+                    ->get();
+                $candidates = $candidates->concat($localFaves)->unique('id')->values();
+            }
+        }
+
         return $candidates;
     }
 
@@ -316,6 +362,27 @@ class FeedRanker
         );
     }
 
+    /**
+     * Per-post view counts from the viewer's country (article_country_views),
+     * as [post_id => views]. Empty when the viewer's country is unknown or the
+     * candidate pool is empty. Only article posts have rows here today.
+     *
+     * @param int[] $postIds
+     * @return array<int,int>
+     */
+    private function loadCountryViews(?string $viewerCountry, array $postIds): array
+    {
+        if (!$viewerCountry || empty($postIds)) {
+            return [];
+        }
+        return DB::table('article_country_views')
+            ->where('country_code', $viewerCountry)
+            ->whereIn('post_id', $postIds)
+            ->pluck('views', 'post_id')
+            ->map(fn ($v) => (int) $v)
+            ->all();
+    }
+
     /** User ids of the automated/system accounts (config/bots.php), resolved once. */
     private ?array $botIds = null;
     private function botUserIds(): array
@@ -329,7 +396,7 @@ class FeedRanker
             : DB::table('users')->whereIn('username', $names)->pluck('id')->map('intval')->all();
     }
 
-    private function scorePost(Post $post, User $user, array $affinity, array $follows, bool $coldStart, ?string $viewerCountry = null): float
+    private function scorePost(Post $post, User $user, array $affinity, array $follows, bool $coldStart, ?string $viewerCountry = null, array $countryViews = []): float
     {
         $w = config('feed.weights');
 
@@ -373,6 +440,19 @@ class FeedRanker
         if ($viewerCountry && $post->user?->country
             && strcasecmp($viewerCountry, $post->user->country) === 0) {
             $score *= (float) config('feed.same_country_multiplier');
+        }
+
+        // "Popular in your country" boost: lift posts that visitors from the
+        // viewer's own country keep opening (per-country view table). Scales with
+        // how much the country reads this post, saturating at a configurable cap
+        // so one runaway article can't dominate. Only articles currently carry
+        // this signal (views are recorded on article page loads).
+        $cv = (int) ($countryViews[$post->id] ?? 0);
+        if ($viewerCountry && $cv > 0) {
+            $b = config('feed.country_view_boost');
+            $saturation = max(1, (int) ($b['saturation'] ?? 40));
+            $ratio = min(1.0, log(1 + $cv) / log(1 + $saturation));
+            $score *= 1 + ((float) ($b['multiplier'] ?? 1.0) - 1) * $ratio;
         }
 
         $isBot = in_array($post->user_id, $this->botUserIds(), true);
