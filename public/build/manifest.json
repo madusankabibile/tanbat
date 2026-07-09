@@ -105,5 +105,14 @@
     "name": "sidebars",
     "src": "resources/js/sidebars.js",
     "isEntry": true
+  },
+  "resources/js/user-deleted.js": {
+    "file": "assets/user-deleted-CS_zPrTH.js",
+    "name": "user-deleted",
+    "src": "resources/js/user-deleted.js",
+    "isEntry": true,
+    "imports": [
+      "_cards-G04yePYr.js"
+    ]
   }
 }

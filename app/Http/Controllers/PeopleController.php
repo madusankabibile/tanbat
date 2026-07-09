@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Services\GeoLocator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -128,6 +129,104 @@ class PeopleController extends Controller
             'last_page'=> $paginator->lastPage(),
             'total'    => $paginator->total(),
             'has_more' => $paginator->hasMorePages(),
+        ]);
+    }
+
+    /**
+     * GET /api/discover/suggested — PUBLIC suggested-people list.
+     *
+     * Powers the "account deleted" recovery page: when a visitor lands on a
+     * profile URL for a member who no longer exists, we surface people to
+     * connect with instead. Results are prioritised by the visitor's own
+     * country (resolved from their IP) and by how recently active each member
+     * is. Guest-safe — follow state is only resolved for authenticated viewers.
+     */
+    public function suggested(Request $request, GeoLocator $geo): JsonResponse
+    {
+        $perPage = max(6, min(48, (int) $request->query('per_page', 18)));
+        $page    = max(1, (int) $request->query('page', 1));
+
+        $viewer = Auth::user();
+
+        $base = User::query()
+            // Hide automated content bots + the shared anonymous account.
+            ->whereNotIn('users.username', config('bots.usernames', []));
+        if ($viewer) {
+            $base->where('users.id', '!=', $viewer->id);
+        }
+
+        $base = $this->applyFilters($base, $request);
+
+        // Only auto-detect the visitor's country when they haven't picked one.
+        $explicitCountry = trim((string) $request->query('country', ''));
+        $geoCountry = ($explicitCountry === '' || $explicitCountry === 'all')
+            ? $geo->country($request)
+            : null;
+
+        $recentWindow = now()->subDay();
+        $onlineWindow = now()->subMinutes(5);
+
+        // Select the explicit columns first, THEN withCount — so its subquery
+        // aliases (recent_posts, …) are appended and remain available to the
+        // ORDER BY below (a later ->select would drop them).
+        $base->select(
+            'users.id', 'users.name', 'users.username',
+            'users.profile_picture', 'users.banner_image',
+            'users.country', 'users.gender', 'users.age',
+            'users.created_at', 'users.updated_at',
+        )->withCount([
+            'posts as recent_posts'        => fn ($q) => $q->where('created_at', '>=', $recentWindow),
+            'comments as recent_comments'  => fn ($q) => $q->where('created_at', '>=', $recentWindow),
+            'posts as total_posts',
+        ]);
+
+        $sort = (string) $request->query('sort', 'suggested');
+        if ($sort === 'suggested') {
+            // Home-country members first, then most recently active, then prolific.
+            if ($geoCountry) {
+                $base->orderByRaw('CASE WHEN users.country = ? THEN 0 ELSE 1 END', [$geoCountry]);
+            }
+            $base->orderByRaw('(recent_posts + recent_comments) desc')
+                 ->orderByDesc('total_posts')
+                 ->orderByDesc('users.updated_at');
+        } else {
+            $base = $this->applySort($base, $sort, 'discover', $viewer?->id ?? 0);
+        }
+
+        $paginator = $base->paginate($perPage, ['*'], 'page', $page);
+
+        $userIds = collect($paginator->items())->pluck('id')->all();
+
+        $followedSet = [];
+        if ($viewer && $userIds) {
+            $followedSet = array_flip(
+                $viewer->following()->whereIn('users.id', $userIds)->pluck('users.id')->all()
+            );
+        }
+
+        $items = collect($paginator->items())->map(fn (User $u) => [
+            'id'              => $u->id,
+            'name'            => $u->name,
+            'username'        => $u->username,
+            'profile_picture' => $u->avatarUrl(),
+            'banner_image'    => $u->bannerUrl(),
+            'country'         => $u->country,
+            'gender'          => $u->gender,
+            'age'             => $u->age,
+            'joined_at'       => $u->created_at?->format('M Y'),
+            'url'             => url('/' . $u->username),
+            'online'          => $u->updated_at && $u->updated_at->gte($onlineWindow),
+            'is_self'         => $viewer && $viewer->id === $u->id,
+            'is_following'    => isset($followedSet[$u->id]),
+        ]);
+
+        return response()->json([
+            'items'       => $items,
+            'geo_country' => $geoCountry,
+            'page'        => $paginator->currentPage(),
+            'last_page'   => $paginator->lastPage(),
+            'total'       => $paginator->total(),
+            'has_more'    => $paginator->hasMorePages(),
         ]);
     }
 

@@ -65,6 +65,12 @@ Route::get('/posts/{postId}', [\App\Http\Controllers\LegacyArticleController::cl
 Route::get('/read-blog/{slug}', [\App\Http\Controllers\ReadBlogController::class, 'show'])
     ->where('slug', '[0-9].*')
     ->name('read-blog');
+// Old WoWonder photo-album permalink /albums/{username}. Forwards to the
+// member's photos tab, or shows the "account deleted" recovery page if they're
+// gone. See App\Http\Controllers\UserController::albums.
+Route::get('/albums/{username}', [UserController::class, 'albums'])
+    ->where('username', '[A-Za-z0-9_.]+')
+    ->name('legacy.albums');
 // Legacy profile path — kept as a permanent alias to the same controller so
 // old /u/{username} links (and usernames that collide with a reserved
 // top-level route, e.g. "admin") still resolve. New links all use the
@@ -115,6 +121,9 @@ Route::prefix('api')->group(function () {
     Route::get('/visitors',   [PageController::class, 'visitors']);
     Route::get('/search/suggest', [SearchController::class, 'suggest']);
     Route::get('/search/results', [SearchController::class, 'results']);
+
+    // Public suggested-people list for the "account deleted" recovery page.
+    Route::get('/discover/suggested', [PeopleController::class, 'suggested']);
 
     // Tanbat Assistant is public end-to-end — guests can search the library and
     // queue a book request; guest requests are attributed to a shared anonymous

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\UserNotification;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -24,7 +26,7 @@ class UserController extends Controller
      * GET /{username} and /{username}/{section} — Facebook-style profile page.
      * Open to guests; a $section (e.g. "followers", "photos") pre-selects the tab.
      */
-    public function show(string $username, ?string $section = null): View|RedirectResponse
+    public function show(string $username, ?string $section = null): View|RedirectResponse|Response
     {
         // The BabyBoss persona has been retired in favour of the Tanbat
         // Assistant wizard. Anyone landing on his profile (legacy links,
@@ -33,8 +35,15 @@ class UserController extends Controller
             return redirect()->route('assistant');
         }
 
-        $profile = User::where('username', $username)->firstOrFail();
-        $viewer  = Auth::user();
+        // Old-site links point at members who have since been removed. Rather
+        // than a bare 404 / bounce to the home page, show a themed "account
+        // deleted" recovery page that helps the visitor connect with people.
+        $profile = User::where('username', $username)->first();
+        if (!$profile) {
+            return $this->deletedProfile($username);
+        }
+
+        $viewer = Auth::user();
 
         // Record a "profile_visit" notification on every visit (no throttle — owner wants
         // to see each individual view, including repeats from the same person). Guests
@@ -54,6 +63,53 @@ class UserController extends Controller
         $tab = in_array($section, self::PROFILE_SECTIONS, true) ? $section : 'posts';
 
         return view('profile', ['profile' => $profile, 'tab' => $tab]);
+    }
+
+    /**
+     * GET /albums/{username} — legacy WoWonder photo-album permalink. If the
+     * member still exists, forward to their photos tab; otherwise fall through
+     * to the same "account deleted" recovery page as the profile routes.
+     */
+    public function albums(string $username): RedirectResponse|Response
+    {
+        $user = User::where('username', $username)->first();
+        if ($user) {
+            return redirect()->route('profile.section', [
+                'username' => $user->username,
+                'section'  => 'photos',
+            ]);
+        }
+
+        return $this->deletedProfile($username);
+    }
+
+    /**
+     * Render the "this account was deleted" recovery page (HTTP 410 Gone).
+     * Carries the requested handle plus a few site stats + the country list
+     * used to seed the people-discovery filters. The suggested-people cards
+     * themselves are loaded client-side from /api/discover/suggested.
+     */
+    private function deletedProfile(string $username): Response
+    {
+        $stats = [
+            'posts'    => Post::count(),
+            'users'    => User::count(),
+            'likes'    => (int) Post::sum('likes_count'),
+            'comments' => Comment::count(),
+        ];
+
+        $countries = User::query()
+            ->whereNotNull('country')
+            ->where('country', '!=', '')
+            ->distinct()
+            ->orderBy('country')
+            ->pluck('country');
+
+        return response()->view('user-deleted', [
+            'username'  => $username,
+            'stats'     => $stats,
+            'countries' => $countries,
+        ], 410);
     }
 
     /** GET /api/users/{user}/followers — public list of a user's followers */

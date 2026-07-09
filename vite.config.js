@@ -15,6 +15,7 @@ export default defineConfig({
                 'resources/js/share-module.js',
                 'resources/js/sidebars.js',
                 'resources/js/people.js',
+                'resources/js/user-deleted.js',
                 'resources/js/assistant.js',
                 'resources/js/books.js',
                 'resources/js/book-show.js',
