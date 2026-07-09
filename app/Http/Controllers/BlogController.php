@@ -39,15 +39,37 @@ class BlogController extends Controller
     /** GET /blog — render the public blog index. */
     public function page(Request $request, GeoLocator $geo): View
     {
+        return $this->render($request, $geo, null);
+    }
+
+    /**
+     * GET /blog-category/{id} — legacy WoWonder blog-category permalink. Renders
+     * the blog index pre-filtered to that category. Unknown ids just render the
+     * full index (never a 404) so these old links always resolve to a real page.
+     */
+    public function category(Request $request, GeoLocator $geo, int $category): View
+    {
+        return $this->render($request, $geo, Category::find($category));
+    }
+
+    /** Shared render for the blog index, optionally scoped to one category. */
+    private function render(Request $request, GeoLocator $geo, ?Category $active): View
+    {
         $country = $geo->country($request);
+
+        $totalQuery = Post::where('type', 'article');
+        if ($active) {
+            $totalQuery->where('category_id', $active->id);
+        }
 
         return view('blog', [
             'geoCountry'     => $country,
             'geoCountryName' => $country ? ($this->countryNames()[$country] ?? $country) : null,
             'categories'     => Category::orderBy('name')->get(['id', 'name', 'slug']),
+            'activeCategory' => $active,
             'trending'       => $this->trending($country),
             'trendingScope'  => $this->trendingScope,
-            'totalArticles'  => Post::where('type', 'article')->count(),
+            'totalArticles'  => $totalQuery->count(),
         ]);
     }
 

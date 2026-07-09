@@ -104,6 +104,11 @@ Route::get('/search',            [SearchController::class, 'page'])->name('searc
 // Public blog index — geo/hot/new ranked article cards. Guest-accessible.
 // See App\Http\Controllers\BlogController.
 Route::get('/blog',              [\App\Http\Controllers\BlogController::class, 'page'])->name('blog');
+// Legacy WoWonder blog-category permalink /blog-category/{id}. Renders the blog
+// index pre-filtered to that category (or the full index if the id is unknown).
+Route::get('/blog-category/{category}', [\App\Http\Controllers\BlogController::class, 'category'])
+    ->whereNumber('category')
+    ->name('blog.category');
 Route::get('/discover/people',   [PeopleController::class, 'page'])->name('people');
 Route::get('/users/feed.xml',    [UserFeedController::class, 'rss'])->name('users.feed');
 Route::get('/assistant',         [AssistantController::class, 'page'])->name('assistant');
@@ -298,6 +303,16 @@ Route::get('/{username}/{section}', [UserController::class, 'show'])
     ->where('username', '[A-Za-z0-9_.]+')
     ->whereIn('section', UserController::PROFILE_SECTIONS)
     ->name('profile.section');
+
+// Legacy WoWonder profile sub-pages — /{username}/groups, /{username}/albums,
+// /{username}/likes, … Those features don't exist here, so hand the request to
+// the profile controller: it shows the member's profile if they still exist, or
+// the themed "account not found" (410) page if they don't — instead of silently
+// dropping to the home feed. Runs after the known-section route above.
+Route::get('/{username}/{section}', [UserController::class, 'show'])
+    ->where('username', '[A-Za-z0-9_.]+')
+    ->where('section', '[A-Za-z0-9_.-]+')
+    ->name('profile.legacy-section');
 
 /*
 |--------------------------------------------------------------------------

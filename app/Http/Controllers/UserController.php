@@ -60,6 +60,12 @@ class UserController extends Controller
             ]);
         }
 
+        // Map a few legacy WoWonder sub-pages onto their nearest real tab so old
+        // links (e.g. /{username}/albums) land somewhere sensible instead of the
+        // default posts tab. Unknown sections fall back to posts.
+        $legacyAlias = ['albums' => 'photos', 'timeline' => 'posts', 'info' => 'about'];
+        $section = $legacyAlias[$section] ?? $section;
+
         $tab = in_array($section, self::PROFILE_SECTIONS, true) ? $section : 'posts';
 
         return view('profile', ['profile' => $profile, 'tab' => $tab]);

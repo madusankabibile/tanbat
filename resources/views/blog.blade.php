@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Blog — Tanbat')
+@section('title', ($activeCategory ?? null) ? $activeCategory->name . ' — Tanbat Blog' : 'Blog — Tanbat')
 @section('meta_description', 'Read the latest and most popular articles on Tanbat — ranked for you by what\'s trending in your country, hot right now, and freshly published.')
 
 @section('content')
@@ -69,14 +69,19 @@
     {{-- Hero --}}
     <header class="blog-hero">
       <div class="bh-copy">
-        <h1>The Tanbat Blog</h1>
-        <p>
-          @if($geoCountryName)
-            Handpicked for readers in {{ $geoCountryName }} — plus what's hot and freshly published.
-          @else
-            Stories, ideas and deep-dives from the community — ranked by what's hot and new.
-          @endif
-        </p>
+        @isset($activeCategory)
+          <h1>{{ $activeCategory->name }}</h1>
+          <p>Every article filed under {{ $activeCategory->name }} — ranked by what's hot and new.</p>
+        @else
+          <h1>The Tanbat Blog</h1>
+          <p>
+            @if($geoCountryName)
+              Handpicked for readers in {{ $geoCountryName }} — plus what's hot and freshly published.
+            @else
+              Stories, ideas and deep-dives from the community — ranked by what's hot and new.
+            @endif
+          </p>
+        @endisset
       </div>
       <div class="bh-count">
         <strong id="blogTotal">{{ number_format($totalArticles) }}</strong>
@@ -442,6 +447,7 @@
       profileBase: {!! json_encode(rtrim(url('/'), '/')) !!},
     },
     geoCountry: {!! json_encode($geoCountry) !!},
+    initialCategory: {!! json_encode(($activeCategory ?? null)?->slug) !!},
   };
 </script>
 @endpush

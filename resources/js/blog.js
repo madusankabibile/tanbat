@@ -14,7 +14,9 @@ const esc = (s) => String(s ?? '')
 const state = {
   sort: 'for-you',
   q: '',
-  category: 'all',
+  // Pre-filter to a category when the page was opened as /blog-category/{id}
+  // (BLOG.initialCategory is that category's slug, else null).
+  category: BLOG.initialCategory || 'all',
   page: 1,
   lastPage: 1,
   total: 0,
