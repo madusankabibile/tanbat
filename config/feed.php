@@ -85,6 +85,12 @@ return [
     // How long an impression keeps a post out of the user's feed (days).
     'impression_ttl_days' => 7,
 
+    // Guest (IP-keyed) rotation: how long a post stays out of an anonymous
+    // visitor's feed after it's been served to their IP. Shorter than the
+    // member window so guests still see popular content again fairly soon, but
+    // long enough that refreshing repeatedly keeps surfacing new posts.
+    'guest_impression_ttl_hours' => 12,
+
     // Demographic scoring (small contributions — never the dominant signal).
     'demographic' => [
         'same_country_weight'   => 0.45,

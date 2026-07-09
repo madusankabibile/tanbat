@@ -35,15 +35,18 @@ class FeedRanker
      * a like/comment/click on the previous post immediately influences which post
      * comes back next — the algorithm is re-run on every request.
      *
-     * @param int[] $excludeIds Post IDs already rendered in this session.
+     * @param int[]       $excludeIds Post IDs already rendered in this session.
+     * @param string|null $guestKey   For anonymous viewers: a hash of their IP,
+     *                                used to persist "already seen" across page
+     *                                refreshes so the guest feed rotates.
      * @return array{posts: Collection<int, Post>, cold_start: bool, recycled: bool, exhausted: bool}
      */
-    public function feedFor(?User $user, array $excludeIds = [], int $limit = 1, ?string $viewerCountry = null): array
+    public function feedFor(?User $user, array $excludeIds = [], int $limit = 1, ?string $viewerCountry = null, ?string $guestKey = null): array
     {
         $limit = max(1, min(20, $limit));
 
         if (!$user) {
-            return $this->anonymousFeed($limit, $excludeIds, $viewerCountry) + ['recycled' => false];
+            return $this->anonymousFeed($limit, $excludeIds, $viewerCountry, $guestKey);
         }
 
         // Rank by the viewer's live (IP-resolved) country when we have it,
@@ -108,8 +111,15 @@ class FeedRanker
         ];
     }
 
-    /** Unauthenticated visitors: simple trending-newest mix, no personalization. */
-    private function anonymousFeed(int $limit, array $excludeIds = [], ?string $viewerCountry = null): array
+    /**
+     * Unauthenticated visitors: trending-newest mix, geo-blended, with
+     * IP-keyed rotation. Posts already shown to this guest's IP (within the
+     * guest TTL) are excluded so every refresh surfaces new content — the
+     * anonymous equivalent of the member "already seen" filter. When the guest
+     * has exhausted the fresh pool we recycle (drop the seen filter) so they
+     * never hit a dead end.
+     */
+    private function anonymousFeed(int $limit, array $excludeIds = [], ?string $viewerCountry = null, ?string $guestKey = null): array
     {
         // Heat, dampened for automated/system accounts so genuine members lead
         // even the guest feed.
@@ -123,46 +133,78 @@ class FeedRanker
             $bindings = array_merge($botIds, [$botMult]);
         }
 
-        // Book posts are members-only — never expose them to anonymous viewers.
-        $q = Post::with(['user:id,name,username,profile_picture', 'category', 'media', 'tags'])
-            ->select('posts.*')
-            ->selectRaw("$heat AS heat", $bindings)
-            ->where('is_adult', false)
-            ->where('type', '!=', 'book');
-        if (!empty($excludeIds)) $q->whereNotIn('id', $excludeIds);
-
-        // Prefer posts from the viewer's own country (resolved from their IP),
-        // and — more strongly — content that readers in the viewer's country
-        // actually open the most (per-country view table). The latter leads so
-        // guests, like members, get "what your country reads" surfaced first.
-        if ($viewerCountry) {
-            $q->selectRaw(
-                '(SELECT au.country FROM users au WHERE au.id = posts.user_id) = ? AS same_country',
-                [$viewerCountry]
-            );
-            $q->selectRaw(
-                '(SELECT COALESCE(acv.views, 0) FROM article_country_views acv
-                    WHERE acv.post_id = posts.id AND acv.country_code = ?) AS country_views',
-                [$viewerCountry]
-            );
-            // Blend the country-reading signal INTO the heat score instead of
-            // sorting on it first. Sorting on country_views first pinned every
-            // article with any local views above all image/video/status posts,
-            // so guests only ever saw articles. LOG() dampens runaway article
-            // view counts so a couple of viral articles don't monopolise the
-            // feed, while same-country authorship still gets a nudge.
-            $q->orderByRaw('(heat + LOG(country_views + 1) * 2.0 + same_country * 1.5) DESC')
-              ->orderByDesc('created_at');
-        } else {
-            $q->orderByDesc('heat')
-              ->orderByDesc('created_at');
+        // Posts this guest IP has already been shown recently — excluded so the
+        // feed rotates across refreshes. Empty when there's no guest key.
+        $guestSeenIds = [];
+        if ($guestKey) {
+            try {
+                $ttlHours = (int) config('feed.guest_impression_ttl_hours', 12);
+                $guestSeenIds = DB::table('guest_feed_impressions')
+                    ->where('ip_hash', $guestKey)
+                    ->where('seen_at', '>=', now()->subHours($ttlHours))
+                    ->pluck('post_id')
+                    ->all();
+            } catch (\Throwable $e) {
+                // Table not migrated yet (e.g. code deployed before `migrate`):
+                // fall back to the non-rotating feed rather than erroring out.
+                $guestSeenIds = [];
+            }
         }
 
-        $rows = $q->take($limit)->get();
+        // Query factory — lets us re-run without the seen filter to recycle.
+        $build = function (array $skipIds) use ($heat, $bindings, $viewerCountry, $limit) {
+            // Book posts are members-only — never expose them to anonymous viewers.
+            $q = Post::with(['user:id,name,username,profile_picture', 'category', 'media', 'tags'])
+                ->select('posts.*')
+                ->selectRaw("$heat AS heat", $bindings)
+                ->where('is_adult', false)
+                ->where('type', '!=', 'book');
+            if (!empty($skipIds)) $q->whereNotIn('id', $skipIds);
+
+            // Prefer posts from the viewer's own country (resolved from their IP),
+            // and content that readers in the viewer's country open the most.
+            if ($viewerCountry) {
+                $q->selectRaw(
+                    '(SELECT au.country FROM users au WHERE au.id = posts.user_id) = ? AS same_country',
+                    [$viewerCountry]
+                );
+                $q->selectRaw(
+                    '(SELECT COALESCE(acv.views, 0) FROM article_country_views acv
+                        WHERE acv.post_id = posts.id AND acv.country_code = ?) AS country_views',
+                    [$viewerCountry]
+                );
+                // Blend the country-reading signal INTO the heat score instead of
+                // sorting on it first. Sorting on country_views first pinned every
+                // article with any local views above all image/video/status posts,
+                // so guests only ever saw articles. LOG() dampens runaway article
+                // view counts so a couple of viral articles don't monopolise the
+                // feed, while same-country authorship still gets a nudge.
+                $q->orderByRaw('(heat + LOG(country_views + 1) * 2.0 + same_country * 1.5) DESC')
+                  ->orderByDesc('created_at');
+            } else {
+                $q->orderByDesc('heat')
+                  ->orderByDesc('created_at');
+            }
+
+            return $q->take($limit)->get();
+        };
+
+        // Strict pass: skip both the session-loaded and already-seen-by-IP posts.
+        $rows = $build(array_merge($excludeIds, $guestSeenIds));
+        $recycled = false;
+
+        // Recycle: this IP has seen everything recent. Drop the seen filter (but
+        // keep session excludeIds so a card never repeats mid-scroll) so the
+        // guest keeps getting a feed rather than an empty "nothing more" screen.
+        if ($rows->isEmpty() && !empty($guestSeenIds)) {
+            $rows = $build($excludeIds);
+            $recycled = $rows->isNotEmpty();
+        }
 
         return [
             'posts'      => $rows,
             'cold_start' => true,
+            'recycled'   => $recycled,
             'exhausted'  => $rows->isEmpty(),
         ];
     }
