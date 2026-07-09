@@ -58,6 +58,13 @@ Route::get('/blogs/{postId}/{slug?}', [\App\Http\Controllers\LegacyArticleContro
 Route::get('/posts/{postId}', [\App\Http\Controllers\LegacyArticleController::class, 'showByPostId'])
     ->whereNumber('postId')
     ->name('legacy.post');
+// Dedicated shareable pages for status / image / video posts:
+// /posts/{type}/{id}. Two segments, so it never collides with the single-segment
+// legacy short permalink above. See PageController::postShow.
+Route::get('/posts/{type}/{post}', [PageController::class, 'postShow'])
+    ->whereIn('type', ['status', 'image', 'video'])
+    ->whereNumber('post')
+    ->name('post.show');
 // Old WoWonder blog permalink /read-blog/{id}_{slug}.html. Content is gone, so
 // the first visit synthesises an article from the title via the Groq LLM,
 // persists it, and serves the stored copy forever after (never regenerated).

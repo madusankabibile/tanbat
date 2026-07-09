@@ -8,7 +8,7 @@
     "name": "cards"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DCjNGfs1.css",
+    "file": "assets/app-CHWxYJiR.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -55,7 +55,7 @@
     "isEntry": true
   },
   "resources/js/home.js": {
-    "file": "assets/home-C7dd97D1.js",
+    "file": "assets/home-CHq39geN.js",
     "name": "home",
     "src": "resources/js/home.js",
     "isEntry": true,

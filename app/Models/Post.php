@@ -127,6 +127,8 @@ class Post extends Model
         return match ($this->type) {
             'article' => url('/articles/' . $this->slug),
             'book'    => url('/books/' . $this->slug),
+            // Status / image / video posts each get their own shareable page.
+            'status', 'image', 'video' => url('/posts/' . $this->type . '/' . $this->id),
             default   => url('/home#post-' . $this->id),
         };
     }

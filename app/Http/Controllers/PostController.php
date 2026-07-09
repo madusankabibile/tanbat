@@ -726,6 +726,9 @@ class PostController extends Controller
                 $p->type === 'article' => url('/articles/' . $p->slug),
                 $p->type === 'book' && $p->relationLoaded('bookDetail') && $p->bookDetail?->slug
                     => url('/books/' . $p->bookDetail->slug),
+                // Status / image / video posts get a dedicated /posts/{type}/{id} page.
+                in_array($p->type, ['status', 'image', 'video'], true)
+                    => url('/posts/' . $p->type . '/' . $p->id),
                 default => null,
             },
             'book'     => $p->type === 'book' && $p->relationLoaded('bookDetail') && $p->bookDetail ? [

@@ -897,10 +897,10 @@ function syncCardViews(postId, viewsCount) {
 
 function handleShare(id, card) {
   const post = allPosts.find((p) => String(p.id) === String(id));
-  const isArticle = post?.type === 'article';
-  const url = isArticle && post.view_url
-    ? post.view_url
-    : `${APP.urls.home}#post-${id}`;
+  // Every post type now has a canonical permalink (articles/books at their own
+  // pages; status/image/video at /posts/{type}/{id}). Fall back to the feed
+  // hash only if the shape somehow lacks a view_url.
+  const url = post?.view_url || `${APP.urls.home}#post-${id}`;
   const title = post?.title
     || post?.status_text
     || post?.description

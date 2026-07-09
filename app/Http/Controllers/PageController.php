@@ -44,6 +44,53 @@ class PageController extends Controller
         return view('article-create');
     }
 
+    /**
+     * Dedicated shareable page for a status / image / video post:
+     * GET /posts/{type}/{id}. Public (guests can view). Redirects to the
+     * canonical URL when the {type} segment doesn't match the post's real type.
+     */
+    public function postShow(string $type, Post $post)
+    {
+        // Only status/image/video have this page. Articles/books live elsewhere;
+        // send those to their own canonical URL rather than 404.
+        if (!in_array($post->type, ['status', 'image', 'video'], true)) {
+            return redirect()->to($post->permalink(), 301);
+        }
+
+        // Canonical type in the URL — /posts/image/5 for an actual video → 301.
+        if ($post->type !== $type) {
+            return redirect()->route('post.show', ['type' => $post->type, 'post' => $post->id], 301);
+        }
+
+        $post->load([
+            'user:id,name,username,profile_picture,country',
+            'category:id,name,slug',
+            'media',
+            'tags:id,name',
+            'comments' => fn ($q) => $q->whereNull('parent_id')->with(['user', 'replies.user']),
+        ]);
+
+        // Count this visit (mirrors the modal's /api/posts/{id} behaviour).
+        $post->increment('views_count');
+
+        $myReaction = Auth::check() ? $post->reactionBy(Auth::id()) : null;
+
+        // "More posts" — recent status/image/video posts, newest first.
+        $related = Post::with(['user:id,name,username,profile_picture', 'media'])
+            ->whereIn('type', ['status', 'image', 'video'])
+            ->where('id', '!=', $post->id)
+            ->latest()
+            ->limit(6)
+            ->get();
+
+        return view('post-show', [
+            'post'       => $post,
+            'liked'      => $myReaction !== null,
+            'myReaction' => $myReaction,
+            'related'    => $related,
+        ]);
+    }
+
     /** GET /api/sidebar — profile stats + site stats + active users */
     public function sidebar(): JsonResponse
     {
