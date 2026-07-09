@@ -29,7 +29,15 @@
       "Bash(php -l app/Services/FeedRanker.php)",
       "Bash(curl -s \"http://localhost/tanbat-xd/tanbat/api/visitors\")",
       "Bash(php -r \"echo json_encode\\(json_decode\\(file_get_contents\\('php://stdin'\\)\\),JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES\\);\")",
-      "Bash(curl -s -o /dev/null -w \"flagcdn us.png -> HTTP %{http_code} | %{content_type}\\\\n\" \"https://flagcdn.com/w40/us.png\")"
+      "Bash(curl -s -o /dev/null -w \"flagcdn us.png -> HTTP %{http_code} | %{content_type}\\\\n\" \"https://flagcdn.com/w40/us.png\")",
+      "Bash(curl -s -i -c /tmp/cj.txt http://localhost/tanbat-xd/tanbat/auth/user)",
+      "Bash(curl -s -o /dev/null -w 'run1 HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/api/feed)",
+      "Bash(curl -s -o /dev/null -w 'run2 HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/api/feed)",
+      "Bash(curl -s -c /tmp/g.txt http://localhost/tanbat-xd/tanbat/home -o /dev/null)",
+      "Bash(curl -s -o /dev/null -w 'guest HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/g.txt http://localhost/tanbat-xd/tanbat/api/feed)",
+      "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}  %{time_total}s  size %{size_download}\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/home)",
+      "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/home)",
+      "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/api/sidebar)"
     ]
   }
 }
