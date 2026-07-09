@@ -321,6 +321,7 @@ const FONT_COLORS = ['#1E1B4B','#FFFFFF','#FFD700','#FF6584','#0EA5E9','#10B981'
 function setupStatus() {
   const bgWrap = $('#bgSwatches');
   const fontWrap = $('#fontSwatches');
+  if (!bgWrap || !fontWrap) return; // create modals not rendered (e.g. guest)
   bgWrap.innerHTML = BG_COLORS.map((c) =>
     `<button type="button" data-bg="${c}" class="h-6 w-6 rounded-full border border-slate-200" style="background:${c}"></button>`
   ).join('');
@@ -386,6 +387,7 @@ function resetStatusModal() {
 // ─────────── Image modal ───────────
 function setupImage() {
   const input = $('#imageFiles');
+  if (!input) return; // create modals not rendered (e.g. guest)
   input.addEventListener('change', () => {
     const wrap = $('#imagePreviews'); wrap.innerHTML = '';
     Array.from(input.files).slice(0, 10).forEach((f) => {
@@ -441,6 +443,7 @@ function parseEmbedUrl(url) {
 function setupVideo() {
   const vf = $('#videoFile');
   const vt = $('#videoThumb');
+  if (!vf) return; // create modals not rendered (e.g. guest)
   let videoSource = 'file'; // 'file' | 'embed'
   let embedPick = null;     // { provider, id } | null
 
@@ -1881,10 +1884,16 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCategories();
   loadFeed();
   bindFilters();
-  bindCreate();
-  setupStatus();
-  setupImage();
-  setupVideo();
+  // The create composer (status/image/video modals) is member-only — the
+  // markup isn't rendered for guests, so wiring it up would throw on the
+  // missing DOM and abort the rest of init (including infinite scroll). Skip
+  // it entirely for guests.
+  if (APP.user) {
+    bindCreate();
+    setupStatus();
+    setupImage();
+    setupVideo();
+  }
   bindFeedClicks();
   bindCommentForm();
   bindModalActions();
