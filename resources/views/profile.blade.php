@@ -2,7 +2,11 @@
 @section('title', $profile->name . ' — Tanbat')
 
 @section('content')
-@include('partials.navbar')
+@auth
+  @include('partials.navbar')
+@else
+  @include('partials.guest-bar')
+@endauth
 
 <main class="mx-auto w-full max-w-[1100px] px-3 py-6 sm:px-5">
 
@@ -42,11 +46,23 @@
       </div>
     </div>
 
+    @php
+      $tab ??= 'posts';
+      $base = url('/' . $profile->username);
+      $pfTabs = [
+        'posts'     => ['Posts',     $base],
+        'followers' => ['Followers', $base . '/followers'],
+        'following' => ['Following', $base . '/following'],
+        'photos'    => ['Photos',    $base . '/photos'],
+        'videos'    => ['Videos',    $base . '/videos'],
+        'articles'  => ['Articles',  $base . '/articles'],
+        'about'     => ['About',     $base . '/about'],
+      ];
+    @endphp
     <nav class="pf-tabs">
-      <button type="button" class="pf-tab active" data-tab="posts">Posts</button>
-      <button type="button" class="pf-tab" data-tab="about">About</button>
-      <button type="button" class="pf-tab" data-tab="photos">Photos</button>
-      <button type="button" class="pf-tab" data-tab="videos">Videos</button>
+      @foreach($pfTabs as $key => [$label, $href])
+        <a href="{{ $href }}" class="pf-tab {{ $tab === $key ? 'active' : '' }}" data-tab="{{ $key }}">{{ $label }}</a>
+      @endforeach
     </nav>
   </section>
 
@@ -91,8 +107,9 @@
     </aside>
 
     {{-- Right: tab content --}}
+    @php $paneHidden = fn ($name) => $tab === $name ? '' : 'hidden'; @endphp
     <div class="pf-content">
-      <div data-pane="posts" class="pf-pane">
+      <div data-pane="posts" class="pf-pane {{ $paneHidden('posts') }}">
         <div id="profileFeed" class="feed-stack"></div>
         <div id="profileEmpty" class="hidden py-12 text-center">
           <div class="text-sm font-semibold text-slate-700">No posts yet</div>
@@ -100,20 +117,34 @@
         </div>
         <div id="profileLoading" class="py-10 text-center text-sm text-slate-500">Loading posts…</div>
       </div>
-      <div data-pane="about" class="pf-pane hidden">
+      <div data-pane="about" class="pf-pane {{ $paneHidden('about') }}">
         <div class="panel p-5">
           <h3 class="mb-2 text-base font-bold">About {{ $profile->name }}</h3>
           <p class="text-sm text-slate-600 leading-relaxed">A Tanbat member who has shared
           <span id="pfAboutPosts">0</span> posts and reached <span id="pfAboutReach">0</span> viewers.</p>
         </div>
       </div>
-      <div data-pane="photos" class="pf-pane hidden">
+      <div data-pane="photos" class="pf-pane {{ $paneHidden('photos') }}">
         <div id="photosGrid" class="photo-grid"></div>
         <div id="photosEmpty" class="hidden py-12 text-center text-sm text-slate-500">No photos yet.</div>
       </div>
-      <div data-pane="videos" class="pf-pane hidden">
+      <div data-pane="videos" class="pf-pane {{ $paneHidden('videos') }}">
         <div id="videosGrid" class="video-grid"></div>
         <div id="videosEmpty" class="hidden py-12 text-center text-sm text-slate-500">No videos yet.</div>
+      </div>
+      <div data-pane="articles" class="pf-pane {{ $paneHidden('articles') }}">
+        <div id="articlesFeed" class="feed-stack"></div>
+        <div id="articlesEmpty" class="hidden py-12 text-center text-sm text-slate-500">No articles yet.</div>
+      </div>
+      <div data-pane="followers" class="pf-pane {{ $paneHidden('followers') }}">
+        <div id="followersGrid" class="pf-people"></div>
+        <div id="followersEmpty" class="hidden py-12 text-center text-sm text-slate-500">No followers yet.</div>
+        <div id="followersLoading" class="hidden py-10 text-center text-sm text-slate-500">Loading followers…</div>
+      </div>
+      <div data-pane="following" class="pf-pane {{ $paneHidden('following') }}">
+        <div id="followingGrid" class="pf-people"></div>
+        <div id="followingEmpty" class="hidden py-12 text-center text-sm text-slate-500">Not following anyone yet.</div>
+        <div id="followingLoading" class="hidden py-10 text-center text-sm text-slate-500">Loading…</div>
       </div>
     </div>
 
@@ -166,14 +197,18 @@
 
 <script>
   window.__PROFILE__ = {
-    id:       {{ $profile->id }},
-    name:     {!! json_encode($profile->name) !!},
-    username: {!! json_encode($profile->username) !!},
-    apiBase:  {!! json_encode(url('/api/users/' . $profile->id)) !!},
-    followUrl:{!! json_encode(url('/api/users/' . $profile->id . '/follow')) !!},
-    updateUrl:{!! json_encode(url('/api/users/' . $profile->id)) !!},
-    avatarUrl:{!! json_encode(url('/api/users/' . $profile->id . '/avatar')) !!},
-    bannerUrl:{!! json_encode(url('/api/users/' . $profile->id . '/banner')) !!},
+    id:          {{ $profile->id }},
+    name:        {!! json_encode($profile->name) !!},
+    username:    {!! json_encode($profile->username) !!},
+    tab:         {!! json_encode($tab ?? 'posts') !!},
+    sectionBase: {!! json_encode(url('/' . $profile->username)) !!},
+    apiBase:     {!! json_encode(url('/api/users/' . $profile->id)) !!},
+    followUrl:   {!! json_encode(url('/api/users/' . $profile->id . '/follow')) !!},
+    followersUrl:{!! json_encode(url('/api/users/' . $profile->id . '/followers')) !!},
+    followingUrl:{!! json_encode(url('/api/users/' . $profile->id . '/following')) !!},
+    updateUrl:   {!! json_encode(url('/api/users/' . $profile->id)) !!},
+    avatarUrl:   {!! json_encode(url('/api/users/' . $profile->id . '/avatar')) !!},
+    bannerUrl:   {!! json_encode(url('/api/users/' . $profile->id . '/banner')) !!},
   };
 </script>
 
@@ -299,6 +334,43 @@
 }
 .pf-tab:hover { background: #F8FAFC; }
 .pf-tab.active { color: #6C63FF; border-color: #6C63FF; }
+a.pf-tab { text-decoration: none; }
+
+/* Followers / following grids */
+.pf-people {
+  display: grid; gap: 12px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) { .pf-people { grid-template-columns: repeat(2, 1fr); } }
+.pf-person {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: #fff; border: 1px solid #E5E7EB; border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(20,20,50,.04);
+  min-width: 0;
+}
+.pf-person .pp-avatar {
+  height: 48px; width: 48px; border-radius: 9999px; flex-shrink: 0;
+  background: linear-gradient(135deg,#6C63FF,#FF6584);
+  display: grid; place-items: center; overflow: hidden;
+  color: #fff; font-weight: 700; font-size: 18px;
+}
+.pf-person .pp-avatar img { height: 100%; width: 100%; object-fit: cover; }
+.pf-person .pp-id { min-width: 0; flex: 1; }
+.pf-person .pp-name { font-size: 14px; font-weight: 700; color: #1E1B4B; text-decoration: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-person .pp-name:hover { color: #5A52D5; }
+.pf-person .pp-handle { font-size: 12px; color: #6B7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-person .pp-follow {
+  flex-shrink: 0;
+  height: 34px; padding: 0 14px; border-radius: 8px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  background: linear-gradient(135deg,#6C63FF,#5A52D5); color: #fff;
+  box-shadow: 0 4px 12px rgba(108,99,255,.28);
+  transition: transform .12s, background .15s;
+}
+.pf-person .pp-follow:hover { transform: translateY(-1px); }
+.pf-person .pp-follow.is-following { background: #F1F5F9; color: #1E1B4B; box-shadow: none; }
+.pf-person .pp-follow.is-following:hover { background: #FEE2E2; color: #B91C1C; }
 
 /* Layout below header */
 .profile-grid {

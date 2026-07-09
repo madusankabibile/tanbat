@@ -20,6 +20,19 @@ const fmt = (n) => Number(n || 0).toLocaleString();
 let profileData = null;
 let userPosts = [];
 let currentPlyr = null;
+let followersLoaded = false;
+let followingLoaded = false;
+
+// URL for each addressable tab (mirrors the server's /{username}/{section} routes).
+const SECTION_URLS = {
+  posts:     PROFILE.sectionBase,
+  followers: `${PROFILE.sectionBase}/followers`,
+  following: `${PROFILE.sectionBase}/following`,
+  photos:    `${PROFILE.sectionBase}/photos`,
+  videos:    `${PROFILE.sectionBase}/videos`,
+  articles:  `${PROFILE.sectionBase}/articles`,
+  about:     `${PROFILE.sectionBase}/about`,
+};
 
 function applyBanner(p) {
   applyBannerTo(document.getElementById('pfCover'), p);
@@ -128,6 +141,7 @@ async function loadPosts() {
     renderPosts();
     renderPhotos();
     renderVideos();
+    renderArticles();
   } catch (e) {
     toast('Could not load posts.', 'bad');
   } finally {
@@ -185,13 +199,134 @@ function renderVideos() {
   }
 }
 
-// ─────────── Tab switching ───────────
+function renderArticles() {
+  const wrap = $('#articlesFeed');
+  const articles = userPosts.filter((p) => p.type === 'article');
+  if (!articles.length) {
+    wrap.innerHTML = '';
+    $('#articlesEmpty').classList.remove('hidden');
+    return;
+  }
+  $('#articlesEmpty').classList.add('hidden');
+  wrap.innerHTML = articles.map(cardHTML).join('');
+  wrap.querySelectorAll('.gallery-wrap').forEach(bindGallery);
+  hydrateAdSlots(wrap);
+  bindDownloadCountdown(wrap);
+}
+
+// ─────────── Followers / following ───────────
+function personCardHTML(u) {
+  const url = esc(u.url || `${APP.urls.profileBase}/${u.username}`);
+  const av = u.profile_picture
+    ? `<img src="${esc(u.profile_picture)}" alt="">`
+    : esc((u.username || u.name || 'U').charAt(0).toUpperCase());
+  let followBtn = '';
+  if (APP.user && !u.is_self) {
+    followBtn = `<button type="button" class="pp-follow ${u.is_following ? 'is-following' : ''}"
+      data-follow-id="${u.id}" data-following="${u.is_following ? '1' : '0'}">${u.is_following ? 'Following' : 'Follow'}</button>`;
+  }
+  return `<div class="pf-person" data-person-id="${u.id}">
+    <a class="pp-avatar" href="${url}">${av}</a>
+    <div class="pp-id">
+      <a class="pp-name" href="${url}">${esc(u.name || u.username || 'User')}</a>
+      <div class="pp-handle">&#64;${esc(u.username || '')}</div>
+    </div>
+    ${followBtn}
+  </div>`;
+}
+
+async function loadPeople(kind) {
+  const grid    = $(`#${kind}Grid`);
+  const empty   = $(`#${kind}Empty`);
+  const loading = $(`#${kind}Loading`);
+  const apiUrl  = kind === 'followers' ? PROFILE.followersUrl : PROFILE.followingUrl;
+  loading?.classList.remove('hidden');
+  empty?.classList.add('hidden');
+  try {
+    const { items } = await api(apiUrl);
+    if (!items || !items.length) {
+      grid.innerHTML = '';
+      empty?.classList.remove('hidden');
+    } else {
+      grid.innerHTML = items.map(personCardHTML).join('');
+    }
+    return true;
+  } catch (e) {
+    toast(`Could not load ${kind}.`, 'bad');
+    return false;
+  } finally {
+    loading?.classList.add('hidden');
+  }
+}
+
+async function loadFollowers() {
+  followersLoaded = await loadPeople('followers');
+}
+async function loadFollowing() {
+  followingLoaded = await loadPeople('following');
+}
+
+// ─────────── Tab switching (URL-addressable) ───────────
+function activateTab(tab, { push = false } = {}) {
+  if (!SECTION_URLS[tab]) tab = 'posts';
+  $$('.pf-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  $$('.pf-pane').forEach((p) => p.classList.toggle('hidden', p.dataset.pane !== tab));
+  if (push && SECTION_URLS[tab]) {
+    history.pushState({ tab }, '', SECTION_URLS[tab]);
+  }
+  if (tab === 'followers' && !followersLoaded) loadFollowers();
+  if (tab === 'following' && !followingLoaded) loadFollowing();
+}
+
+function tabFromLocation() {
+  const seg = window.location.pathname.split('/').filter(Boolean).pop();
+  return SECTION_URLS[seg] ? seg : 'posts';
+}
+
 function bindTabs() {
-  $$('.pf-tab').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      $$('.pf-tab').forEach((b) => b.classList.toggle('active', b === btn));
-      $$('.pf-pane').forEach((p) => p.classList.toggle('hidden', p.dataset.pane !== tab));
+  $$('.pf-tab').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      // Let modified clicks (new tab / download) behave natively.
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      activateTab(a.dataset.tab, { push: true });
+    });
+  });
+  // Seed history state so the first Back after switching tabs returns here.
+  history.replaceState({ tab: PROFILE.tab || 'posts' }, '', window.location.href);
+  window.addEventListener('popstate', (e) => {
+    activateTab((e.state && e.state.tab) || tabFromLocation(), { push: false });
+  });
+}
+
+// Follow/unfollow from a follower/following card.
+async function handlePersonFollow(btn) {
+  if (!APP.user) return toast('Sign in to follow people', 'bad');
+  const id = btn.dataset.followId;
+  if (!id) return;
+  const wasFollowing = btn.dataset.following === '1';
+  const setState = (following) => {
+    btn.dataset.following = following ? '1' : '0';
+    btn.classList.toggle('is-following', following);
+    btn.textContent = following ? 'Following' : 'Follow';
+  };
+  setState(!wasFollowing); // optimistic
+  try {
+    const res = await api(`${APP.urls.api.users}/${id}/follow`, { method: 'POST' });
+    setState(res.following);
+  } catch (err) {
+    setState(wasFollowing);
+    toast(err.message || 'Could not update follow', 'bad');
+  }
+}
+
+function bindPeopleActions() {
+  ['#followersGrid', '#followingGrid'].forEach((sel) => {
+    const grid = $(sel);
+    if (!grid) return;
+    grid.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-follow-id]');
+      if (btn) { e.preventDefault(); handlePersonFollow(btn); }
     });
   });
 }
@@ -300,9 +435,11 @@ function bindFeedClicks() {
   $('#profileFeed').addEventListener('click', handle);
   $('#photosGrid').addEventListener('click', handle);
   $('#videosGrid').addEventListener('click', handle);
+  $('#articlesFeed').addEventListener('click', handle);
   bindReactions($('#profileFeed'), handleReact);
   bindReactions($('#photosGrid'), handleReact);
   bindReactions($('#videosGrid'), handleReact);
+  bindReactions($('#articlesFeed'), handleReact);
 }
 
 async function handleReact(card, reactionKey) {
@@ -359,6 +496,7 @@ function bindProfilePostMenu() {
       renderPosts();
       renderPhotos();
       renderVideos();
+      renderArticles();
     },
     onChange: (id, patch) => {
       const local = userPosts.find((p) => String(p.id) === String(id));
@@ -367,11 +505,14 @@ function bindProfilePostMenu() {
         renderPosts();
         renderPhotos();
         renderVideos();
+        renderArticles();
       }
     },
   };
   const feed = $('#profileFeed');
   if (feed) window.Tanbat.bindPostMenu(feed, handlers);
+  const articles = $('#articlesFeed');
+  if (articles) window.Tanbat.bindPostMenu(articles, handlers);
 }
 
 function bindProfileShareButton() {
@@ -584,10 +725,15 @@ document.addEventListener('DOMContentLoaded', () => {
   bindTabs();
   bindActions();
   bindFeedClicks();
+  bindPeopleActions();
   bindCommentForm();
   bindPlyrTeardown();
   bindProfilePostMenu();
   bindProfileShareButton();
   bindEditProfileForm();
   bindMediaUploads();
+  // Honour the section the page was opened at (e.g. /user/followers) — the
+  // matching pane is already visible from the server render; this triggers the
+  // lazy load for followers/following.
+  activateTab(PROFILE.tab || 'posts', { push: false });
 });

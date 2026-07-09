@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\UserNotification;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,13 +15,17 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    /** GET /u/{username} — Facebook-style profile page */
-    public function show(string $username): View|RedirectResponse
-    {
-        if (!Auth::check()) {
-            return redirect()->route('landing');
-        }
+    /** Profile tabs that are addressable at /{username}/{section}. */
+    public const PROFILE_SECTIONS = [
+        'posts', 'about', 'photos', 'videos', 'followers', 'following', 'articles',
+    ];
 
+    /**
+     * GET /{username} and /{username}/{section} — Facebook-style profile page.
+     * Open to guests; a $section (e.g. "followers", "photos") pre-selects the tab.
+     */
+    public function show(string $username, ?string $section = null): View|RedirectResponse
+    {
         // The BabyBoss persona has been retired in favour of the Tanbat
         // Assistant wizard. Anyone landing on his profile (legacy links,
         // bookmarks, the old "Message Boss" alias) is sent to the wizard.
@@ -32,8 +37,9 @@ class UserController extends Controller
         $viewer  = Auth::user();
 
         // Record a "profile_visit" notification on every visit (no throttle — owner wants
-        // to see each individual view, including repeats from the same person).
-        if ($viewer->id !== $profile->id) {
+        // to see each individual view, including repeats from the same person). Guests
+        // have no actor to attribute, so only logged-in visitors are recorded.
+        if ($viewer && $viewer->id !== $profile->id) {
             UserNotification::create([
                 'user_id'  => $profile->id,
                 'actor_id' => $viewer->id,
@@ -45,7 +51,73 @@ class UserController extends Controller
             ]);
         }
 
-        return view('profile', ['profile' => $profile]);
+        $tab = in_array($section, self::PROFILE_SECTIONS, true) ? $section : 'posts';
+
+        return view('profile', ['profile' => $profile, 'tab' => $tab]);
+    }
+
+    /** GET /api/users/{user}/followers — public list of a user's followers */
+    public function followers(User $user): JsonResponse
+    {
+        return $this->relationList($user->followers());
+    }
+
+    /** GET /api/users/{user}/following — public list of who a user follows */
+    public function following(User $user): JsonResponse
+    {
+        return $this->relationList($user->following());
+    }
+
+    /**
+     * Shape a followers/following BelongsToMany relation into a paginated card list.
+     * Guest-safe: follow state is only resolved when a viewer is authenticated.
+     */
+    private function relationList(BelongsToMany $relation): JsonResponse
+    {
+        $viewer = Auth::user();
+
+        $paginator = $relation
+            ->select(
+                'users.id',
+                'users.name',
+                'users.username',
+                'users.profile_picture',
+                'users.banner_image',
+                'users.country',
+                'users.created_at',
+            )
+            ->orderBy('users.name')
+            ->paginate(24);
+
+        $userIds = collect($paginator->items())->pluck('id')->all();
+
+        $followedSet = [];
+        if ($viewer && $userIds) {
+            $followedSet = array_flip(
+                $viewer->following()->whereIn('users.id', $userIds)->pluck('users.id')->all()
+            );
+        }
+
+        $items = collect($paginator->items())->map(fn (User $u) => [
+            'id'              => $u->id,
+            'name'            => $u->name,
+            'username'        => $u->username,
+            'profile_picture' => $u->avatarUrl(),
+            'banner_image'    => $u->bannerUrl(),
+            'country'         => $u->country,
+            'joined_at'       => $u->created_at?->format('M Y'),
+            'url'             => url('/' . $u->username),
+            'is_self'         => $viewer && $viewer->id === $u->id,
+            'is_following'    => isset($followedSet[$u->id]),
+        ]);
+
+        return response()->json([
+            'items'     => $items,
+            'page'      => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'total'     => $paginator->total(),
+            'has_more'  => $paginator->hasMorePages(),
+        ]);
     }
 
     /** GET /api/users/{user}/posts — paginated feed of a single user's posts */

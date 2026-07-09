@@ -130,8 +130,10 @@ Route::prefix('api')->group(function () {
     Route::post('/feed/impressions',        [FeedController::class, 'impressions']);
     Route::post('/posts/{post}/click',      [FeedController::class, 'click']);
 
-    Route::get('/users/{user}',         [UserController::class, 'profile']);
-    Route::get('/users/{user}/posts',   [UserController::class, 'posts']);
+    Route::get('/users/{user}',           [UserController::class, 'profile']);
+    Route::get('/users/{user}/posts',     [UserController::class, 'posts']);
+    Route::get('/users/{user}/followers', [UserController::class, 'followers']);
+    Route::get('/users/{user}/following', [UserController::class, 'following']);
 
     Route::middleware('auth')->group(function () {
         Route::get('/people/summary',  [PeopleController::class, 'summary']);
@@ -261,6 +263,14 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 Route::get('/{username}', [UserController::class, 'show'])
     ->where('username', '[A-Za-z0-9_.]+')
     ->name('profile');
+
+// Deep-linkable profile tabs — /{username}/followers, /{username}/photos, …
+// Constrained to the known section names so unrelated two-segment paths still
+// fall through to the fallback below.
+Route::get('/{username}/{section}', [UserController::class, 'show'])
+    ->where('username', '[A-Za-z0-9_.]+')
+    ->whereIn('section', UserController::PROFILE_SECTIONS)
+    ->name('profile.section');
 
 /*
 |--------------------------------------------------------------------------
