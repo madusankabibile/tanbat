@@ -48,4 +48,23 @@ class LegacyArticleController extends Controller
             'related' => $related,
         ]);
     }
+
+    /**
+     * Serves the old Sngine short permalink /posts/{post_id}. On the old site
+     * every post — articles included — was reachable at that URL, so inbound
+     * links and search results still point here. Articles were migrated to
+     * `legacy_articles`; 301-redirect them to their canonical /blogs/{id}/{slug}
+     * page (a single indexable URL). Anything else is a genuine 404.
+     */
+    public function showByPostId(int $postId)
+    {
+        $article = LegacyArticle::where('old_post_id', $postId)->firstOrFail();
+
+        $slug = $article->slug ?: LegacyArticle::slugify($article->title);
+
+        return redirect()->route('legacy.article', [
+            'postId' => $article->old_post_id,
+            'slug'   => $slug,
+        ], 301);
+    }
 }

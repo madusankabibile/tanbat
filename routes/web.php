@@ -49,6 +49,12 @@ Route::get('/articles/{slug}',   [PageController::class, 'articleShow'])->name('
 Route::get('/blogs/{postId}/{slug?}', [\App\Http\Controllers\LegacyArticleController::class, 'show'])
     ->whereNumber('postId')
     ->name('legacy.article');
+// Old Sngine short permalink /posts/{post_id}. Articles were reachable there
+// too, so 301-redirect these to their canonical /blogs/{id}/{slug} page. This
+// is the browser-facing web route; the SPA's JSON post API lives under /api.
+Route::get('/posts/{postId}', [\App\Http\Controllers\LegacyArticleController::class, 'showByPostId'])
+    ->whereNumber('postId')
+    ->name('legacy.post');
 // Legacy profile path — kept as a permanent alias to the same controller so
 // old /u/{username} links (and usernames that collide with a reserved
 // top-level route, e.g. "admin") still resolve. New links all use the
