@@ -37,4 +37,13 @@ return [
         'shoutout_handle'  => env('BABYBOSS_SHOUTOUT_HANDLE', 'tanbat'),
     ],
 
+    // Groq — OpenAI-compatible LLM API. Used to synthesise blog articles for old
+    // WoWonder /read-blog/{id}_{slug}.html URLs (see App\Services\ArticleGenerator).
+    'groq' => [
+        'key'      => env('GROQ_API_KEY'),
+        'base_url' => rtrim(env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'), '/'),
+        'model'    => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+        'timeout'  => (int) env('GROQ_TIMEOUT', 25),
+    ],
+
 ];

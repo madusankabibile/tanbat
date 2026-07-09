@@ -55,6 +55,13 @@ Route::get('/blogs/{postId}/{slug?}', [\App\Http\Controllers\LegacyArticleContro
 Route::get('/posts/{postId}', [\App\Http\Controllers\LegacyArticleController::class, 'showByPostId'])
     ->whereNumber('postId')
     ->name('legacy.post');
+// Old WoWonder blog permalink /read-blog/{id}_{slug}.html. Content is gone, so
+// the first visit synthesises an article from the title via the Groq LLM,
+// persists it, and serves the stored copy forever after (never regenerated).
+// See App\Http\Controllers\ReadBlogController.
+Route::get('/read-blog/{slug}', [\App\Http\Controllers\ReadBlogController::class, 'show'])
+    ->where('slug', '[0-9].*')
+    ->name('read-blog');
 // Legacy profile path — kept as a permanent alias to the same controller so
 // old /u/{username} links (and usernames that collide with a reserved
 // top-level route, e.g. "admin") still resolve. New links all use the
