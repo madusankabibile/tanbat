@@ -9,5 +9,4 @@ Disallow: /messages/
 Disallow: /search
 Disallow: /tasks/
 
-# Optional: You can link to your sitemap here if you generate one
-# Sitemap: https://tanbat.com/sitemap.xml
+Sitemap: https://tanbat.com/sitemap.xml

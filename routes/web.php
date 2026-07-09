@@ -38,6 +38,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/tasks/run', [TaskRunnerController::class, 'run']);
 
 Route::get('/',                  [PageController::class, 'landing'])->name('landing');
+// XML sitemap of the latest 50 articles. Registered here (before the root-level
+// /{username} route, whose charset also matches "sitemap.xml") so it resolves.
+Route::get('/sitemap.xml',       [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
 Route::get('/home',              [PageController::class, 'home'])->name('home');
 Route::get('/privacy',           [PageController::class, 'privacy'])->name('privacy');
 Route::get('/articles/feed.xml', [ArticleFeedController::class, 'rss'])->name('articles.feed');
