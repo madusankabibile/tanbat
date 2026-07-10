@@ -141,6 +141,66 @@ class StatisticsPageTest extends TestCase
         }
     }
 
+    public function test_today_tab_wires_up_the_live_poller(): void
+    {
+        $html = $this->actingAs($this->admin())->get('/admin/statistics?tab=today')->getContent();
+
+        $this->assertStringContainsString('admin/statistics/live', $html);
+        // Each polled field needs a hook for the poller to patch in place.
+        foreach (['views', 'uniques', 'new_visitors', 'returning', 'live'] as $key) {
+            $this->assertStringContainsString("data-live-value=\"{$key}\"", $html);
+        }
+        foreach (['views_trend', 'uniques_trend', 'pages', 'visitors'] as $key) {
+            $this->assertStringContainsString("data-live-html=\"{$key}\"", $html);
+        }
+    }
+
+    public function test_only_the_today_tab_polls(): void
+    {
+        // The other tabs are multi-day aggregates, and two own Chart.js canvases
+        // that an innerHTML swap would destroy.
+        foreach (['traffic', 'countries', 'map', 'referrers', 'devices', 'log', 'members'] as $tab) {
+            $html = $this->actingAs($this->admin())->get("/admin/statistics?tab={$tab}")->getContent();
+            $this->assertStringNotContainsString('id="liveBar"', $html, "Tab '{$tab}' must not poll.");
+        }
+    }
+
+    public function test_live_endpoint_returns_the_fields_the_poller_patches(): void
+    {
+        $response = $this->actingAs($this->admin())->getJson('/admin/statistics/live');
+
+        $response->assertOk();
+        $response->assertJsonStructure([
+            'values' => ['views', 'uniques', 'new_visitors', 'returning', 'live'],
+            'html'   => ['views_trend', 'uniques_trend', 'pages', 'visitors'],
+            'server_time',
+        ]);
+
+        // A cached "live" number is worse than no live number at all.
+        $this->assertStringContainsString('no-store', $response->headers->get('cache-control'));
+
+        // The trend chip is rendered by the same partial the full page uses.
+        $chip = $response->json('html.views_trend');
+        $this->assertStringContainsString('class="trend', $chip);
+
+        // Today compares against yesterday, never against a 30-day window. With a
+        // zero baseline the partial states the raw count ("today") instead of a
+        // dishonest percentage, so accept either wording — but never "N days".
+        $this->assertMatchesRegularExpression('/today|yesterday/', $chip);
+        $this->assertStringNotContainsString('days', $chip);
+    }
+
+    public function test_live_endpoint_is_behind_the_admin_gate(): void
+    {
+        $this->get('/admin/statistics/live')->assertRedirect();
+
+        $user = User::where('role', '!=', 'admin')->first();
+        if ($user) {
+            $status = $this->actingAs($user)->get('/admin/statistics/live')->status();
+            $this->assertContains($status, [403, 302], 'Non-admins must not read the live feed.');
+        }
+    }
+
     /** Render the map partial directly: the live DB may hold no geolocated visitor. */
     private function renderMap(array $mapCountries): string
     {

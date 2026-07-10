@@ -178,6 +178,44 @@
   .map__key { display: inline-flex; align-items: center; gap: .375rem; font-size: .6875rem; color: var(--ink-4); }
   .map__key i { width: 10px; height: 10px; border-radius: 2px; background: #F1F2F4; border: 1px solid var(--rule); }
 
+  /* ── Live indicator (Today tab) ──────────────────────── */
+  .live { display: flex; align-items: center; gap: .625rem; }
+  .live__toggle {
+    display: inline-flex; align-items: center; gap: .4375rem;
+    padding: .25rem .5rem .25rem .4375rem;
+    border: 1px solid var(--rule); border-radius: 999px;
+    background: var(--surface);
+    font-family: var(--mono); font-size: .625rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--pine-d);
+  }
+  .live__toggle:hover { background: #F4F5F6; }
+  .live__toggle:focus-visible { outline: 2px solid var(--pine); outline-offset: 1px; }
+  .live__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pine); }
+  .live__stamp {
+    font-family: var(--mono); font-size: .6875rem; color: var(--ink-4);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Paused and stale are visibly different: paused is a choice, stale is a fault. */
+  .live.is-paused .live__toggle { color: var(--ink-3); }
+  .live.is-paused .live__dot { background: var(--faint); }
+  .live.is-stale  .live__toggle { color: var(--brass); border-color: var(--brass-tint); }
+  .live.is-stale  .live__dot { background: var(--brass); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .live:not(.is-paused):not(.is-stale) .live__dot { animation: live-pulse 2s ease-in-out infinite; }
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(7, 119, 90, .35); }
+      50%      { opacity: .75; box-shadow: 0 0 0 4px rgba(7, 119, 90, 0); }
+    }
+    /* A number that changed on its own should say so, once, quietly. */
+    .kpi-value.is-fresh { animation: value-fresh 1s ease-out; }
+    @keyframes value-fresh {
+      0%   { color: var(--pine); }
+      100% { color: var(--ink); }
+    }
+  }
+
   .empty { padding: 2rem 1.125rem; text-align: center; }
   .empty__title { font-size: .8125rem; font-weight: 500; color: var(--ink-2); }
   .empty__hint  { margin-top: .25rem; font-size: .75rem; color: var(--ink-4); }

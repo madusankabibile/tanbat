@@ -231,6 +231,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     // Visitor + membership analytics
     Route::get('statistics',           [AdminStatisticsController::class, 'index'])->name('statistics.index');
+    // JSON feed polled by the Today tab so its counters update without a reload.
+    Route::get('statistics/live',      [AdminStatisticsController::class, 'live'])->name('statistics.live');
 
     // Users
     Route::get('users',                [AdminUserController::class, 'index'])->name('users.index');

@@ -120,6 +120,53 @@ class StatisticsController extends Controller
         return view('admin.statistics.index', $shared + $data);
     }
 
+    /**
+     * JSON feed for the Today tab's poller.
+     *
+     * Returns formatted values plus HTML rendered by the *same* partials the
+     * full page uses, so the live view can never drift from the server-rendered
+     * one and no row markup has to be duplicated in JavaScript.
+     *
+     * Only Today is polled: every other tab is a multi-day aggregate that does
+     * not move minute to minute, and two of them own Chart.js canvases that a
+     * naive innerHTML swap would destroy.
+     */
+    public function live()
+    {
+        $data  = $this->todayTab();
+        $today = $data['today'];
+
+        $trend = fn (array $chip) => view('admin.partials._trend', [
+            't'           => $chip,
+            'currentText' => 'today',
+            'compareText' => 'vs yesterday',
+        ])->render();
+
+        return response()
+            ->json([
+                'values' => [
+                    'views'        => number_format($today['views']),
+                    'uniques'      => number_format($today['uniques']),
+                    'new_visitors' => number_format($today['new_visitors']),
+                    'returning'    => number_format($today['returning']),
+                    'live'         => number_format($today['live']),
+                ],
+                'html' => [
+                    'views_trend'   => $trend($today['views_trend']),
+                    'uniques_trend' => $trend($today['uniques_trend']),
+                    'pages'    => view('admin.statistics.tabs._today-pages', [
+                        'todayTopPages' => $data['todayTopPages'],
+                    ])->render(),
+                    'visitors' => view('admin.statistics.tabs._today-visitors', [
+                        'liveVisitors' => $data['liveVisitors'],
+                    ])->render(),
+                ],
+                'server_time' => now()->toIso8601String(),
+            ])
+            // A cached "live" number is worse than no live number at all.
+            ->header('Cache-Control', 'no-store, max-age=0');
+    }
+
     /* ─────────────────────────────── Today ──────────────────────────────── */
 
     /**
