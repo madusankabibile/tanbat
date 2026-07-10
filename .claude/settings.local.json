@@ -39,7 +39,14 @@
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/home)",
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}  %{time_total}s\\\\n' -b /tmp/cj.txt http://localhost/tanbat-xd/tanbat/api/sidebar)",
       "Bash(curl -s \"http://localhost/tanbat-xd/tanbat/home\")",
-      "Bash(curl -s http://localhost/tanbat-xd/tanbat/articles/the-pricing-mistake-every-first-time-founder-makes-xv2oe)"
+      "Bash(curl -s http://localhost/tanbat-xd/tanbat/articles/the-pricing-mistake-every-first-time-founder-makes-xv2oe)",
+      "Skill(dataviz)",
+      "Bash(node scripts/validate_palette.js \"#1F6F5C,#B45309,#175CD3,#9A3F8F\" --mode light --surface \"#FFFFFF\")",
+      "Bash(php -r ' *)",
+      "Bash(./vendor/bin/phpunit --filter TmpAdminDashboardTest)",
+      "Bash(python -c ' *)",
+      "Bash(./vendor/bin/phpunit --filter test_admin_dashboard_renders)",
+      "Bash(node *)"
     ]
   }
 }
