@@ -59,7 +59,12 @@
       "PowerShell(php artisan test --filter=StatisticsPageTest 2>&1 | Select-Object -Last 45)",
       "PowerShell(php artisan test --filter=StatisticsPageTest 2>&1 | Select-Object -Last 20)",
       "PowerShell(php artisan test 2>&1 | Select-Object -Last 25)",
-      "PowerShell(php artisan test 2>&1 | Select-Object -Last 14)"
+      "PowerShell(php artisan test 2>&1 | Select-Object -Last 14)",
+      "Bash(npm view *)",
+      "Bash(git check-ignore *)",
+      "PowerShell(php artisan test 2>&1 | Select-Object -Last 18)",
+      "Bash(grep -E \"^\\\\.\\(htaccess\\)$|^index\\\\.php$|^server\\\\.php$\")",
+      "Bash(grep -E \"^\\\\?\\\\? [a-z]+probe|^\\\\?\\\\? .*\\\\.php$\")"
     ]
   }
 }

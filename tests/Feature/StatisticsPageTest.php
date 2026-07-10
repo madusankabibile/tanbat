@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\CountryFlag;
 use App\Services\UserAgentParser;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
@@ -62,6 +63,44 @@ class StatisticsPageTest extends TestCase
         $response->assertSee('chartSignups', false);
         $response->assertSee('Views per visitor');
         $response->assertSee('Account health');
+    }
+
+    public function test_country_flag_resolves_real_codes_and_rejects_placeholders(): void
+    {
+        // Case-insensitive, and the SVG is actually on disk.
+        foreach (['US', 'gb', 'LK', 'in'] as $code) {
+            $this->assertTrue(CountryFlag::exists($code), "Expected a flag for {$code}.");
+            $this->assertStringEndsWith(
+                '/flags/' . strtolower($code) . '.svg',
+                (string) CountryFlag::url($code)
+            );
+        }
+
+        // 'XX' fills users.country for ~99% of rows and must never render a
+        // broken image; the rest are the other ways a code can be absent.
+        foreach (['XX', 'T1', 'ZZ', 'gb-eng', '', null] as $missing) {
+            $this->assertFalse(CountryFlag::exists($missing), var_export($missing, true) . ' must have no flag.');
+            $this->assertNull(CountryFlag::url($missing));
+        }
+    }
+
+    public function test_every_flag_the_page_renders_points_at_a_real_file(): void
+    {
+        $html = $this->actingAs($this->admin())->get('/admin/statistics')->getContent();
+
+        preg_match_all('/<img class="flag-img" src="([^"]+)"/', $html, $matches);
+
+        // A page with no visitors at all would legitimately render zero flags,
+        // so only the resolution of what *was* emitted is asserted here.
+        foreach (array_unique($matches[1]) as $src) {
+            $this->assertFileExists(
+                public_path('flags/' . basename(parse_url($src, PHP_URL_PATH))),
+                "Rendered flag {$src} has no backing SVG."
+            );
+        }
+
+        // Unknown countries fall back to the placeholder, never to a broken <img>.
+        $this->assertStringNotContainsString('src=""', $html);
     }
 
     public function test_range_selector_accepts_known_windows_and_falls_back_otherwise(): void

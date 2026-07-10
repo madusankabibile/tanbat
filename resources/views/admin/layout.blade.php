@@ -295,6 +295,28 @@
   .badge-expired { background: var(--rose-tint);  color: var(--rose); }
   .badge-type    { background: var(--blue-tint);  color: var(--blue); }
 
+  /* ── Country flags (admin/partials/_flag) ────────────── */
+  .flag-img,
+  .flag-unknown {
+    display: inline-block; flex: 0 0 auto;
+    width: 20px; height: 15px;
+    border-radius: 2px;
+    vertical-align: -2px;
+  }
+  .flag-img {
+    object-fit: cover;
+    /* A hairline edge so white-heavy flags (Japan, Poland) keep their shape on
+       a white panel. `outline` with a negative offset paints over the image;
+       an inset box-shadow would sit beneath it on a replaced element. */
+    outline: 1px solid rgba(20, 22, 26, .12);
+    outline-offset: -1px;
+  }
+  /* No flag for this row: hold the same 20px of space so names stay aligned. */
+  .flag-unknown {
+    background: #F4F5F6;
+    border: 1px dashed var(--faint);
+  }
+
   /* ── Tables ──────────────────────────────────────────── */
   .table-card {
     overflow: hidden; border-radius: var(--r); background: var(--surface);

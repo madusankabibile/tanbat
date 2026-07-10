@@ -118,6 +118,12 @@
     font-family: var(--mono); font-size: .625rem; font-weight: 500; letter-spacing: .06em;
     color: var(--ink-4);
   }
+  /* The flag sits inline ahead of the country name in both the barline panels
+     and the log table; .flag-img itself carries no margin so it stays reusable. */
+  .barline__name > .flag-img,
+  .barline__name > .flag-unknown { margin-right: .4375rem; }
+
+  .country-cell { display: inline-flex; align-items: center; gap: .4375rem; white-space: nowrap; }
 
   .empty { padding: 2rem 1.125rem; text-align: center; }
   .empty__title { font-size: .8125rem; font-weight: 500; color: var(--ink-2); }
@@ -260,6 +266,7 @@
         <div class="barline">
           <div class="barline__head">
             <span class="barline__name">
+              @include('admin.partials._flag', ['code' => $c['code'], 'label' => $c['name']])
               {{ $c['name'] }} <span class="flag">{{ $c['code'] }}</span>
             </span>
             <span class="barline__val">
@@ -442,8 +449,11 @@
           <tr>
             <td class="cell-mono">{{ $v->ip_address ?? '—' }}</td>
             <td>
-              <span class="text-slate-600">{{ $v->country_name ?: 'Unknown' }}</span>
-              @if($v->country_code)<span class="flag"> {{ $v->country_code }}</span>@endif
+              <span class="country-cell">
+                @include('admin.partials._flag', ['code' => $v->country_code, 'label' => $v->country_name ?: 'Unknown'])
+                <span class="text-slate-600">{{ $v->country_name ?: 'Unknown' }}</span>
+                @if($v->country_code)<span class="flag">{{ $v->country_code }}</span>@endif
+              </span>
             </td>
             <td><span class="cell-path" title="{{ $v->page }}">{{ $v->page ?: '—' }}</span></td>
             <td>
@@ -625,7 +635,10 @@
       @forelse($demographics['countries'] as $c)
         <div class="barline">
           <div class="barline__head">
-            <span class="barline__name">{{ $c['name'] }} <span class="flag">{{ $c['code'] }}</span></span>
+            <span class="barline__name">
+              @include('admin.partials._flag', ['code' => $c['code'], 'label' => $c['name']])
+              {{ $c['name'] }} <span class="flag">{{ $c['code'] }}</span>
+            </span>
             <span class="barline__val">{{ number_format($c['count']) }}</span>
           </div>
           <div class="barline__track">
