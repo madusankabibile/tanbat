@@ -23,21 +23,45 @@ use Illuminate\Support\Facades\DB;
  *    "how many views did /books get". Retained 30 days.
  *
  * Every panel below is fed from whichever table can answer it honestly.
+ *
+ * The page is split into tabs, and the tabs are server-side (plain links, not
+ * JS show/hide) for three reasons: only the open tab's queries run, each tab is
+ * deep-linkable, and the visitor log's pagination needs no special handling.
  */
 class StatisticsController extends Controller
 {
     /** Windows the range selector offers. `visitors`-backed panels cap out at 30. */
     private const RANGES = [7, 30, 90];
 
+    /** Tab slug => label, in display order. The first is the default. */
+    private const TABS = [
+        'today'     => 'Today',
+        'traffic'   => 'Traffic',
+        'countries' => 'Countries',
+        'map'       => 'Map',
+        'referrers' => 'Referrers',
+        'devices'   => 'Devices',
+        'log'       => 'Visitor log',
+        'members'   => 'Members',
+    ];
+
     private const VISITOR_TABLE_RETENTION_DAYS = 30;
 
     private const LOG_PER_PAGE = 15;
+
+    /** A visitor last seen within this many minutes counts as "here now". */
+    private const LIVE_WINDOW_MINUTES = 15;
 
     /** Memoised: both the members strip and the health panel ask for this. */
     private ?int $neverPosted = null;
 
     public function index(Request $request)
     {
+        $tab = (string) $request->query('tab', '');
+        if (!array_key_exists($tab, self::TABS)) {
+            $tab = array_key_first(self::TABS);
+        }
+
         $days = (int) $request->query('days', 30);
         if (!in_array($days, self::RANGES, true)) {
             $days = 30;
@@ -51,33 +75,98 @@ class StatisticsController extends Controller
 
         // `visitors` only holds 30 days, so its panels can never honour a 90-day
         // request. Track the effective window separately and say so in the view.
-        $visitorTableDays = min($days, self::VISITOR_TABLE_RETENTION_DAYS);
+        $visitorTableDays  = min($days, self::VISITOR_TABLE_RETENTION_DAYS);
         $visitorTableSince = $now->copy()->subDays($visitorTableDays - 1)->startOfDay();
 
-        return view('admin.statistics.index', [
-            'days'              => $days,
-            'ranges'            => self::RANGES,
-            'since'             => $since,
-            'visitorTableDays'  => $visitorTableDays,
+        $shared = [
+            'tab'                  => $tab,
+            'tabs'                 => self::TABS,
+            'days'                 => $days,
+            'ranges'               => self::RANGES,
+            'since'                => $since,
+            'visitorTableDays'     => $visitorTableDays,
             'visitorWindowClamped' => $days > self::VISITOR_TABLE_RETENTION_DAYS,
+            // The window selector is meaningless on a tab that always means "today".
+            'showRangeSelector'    => $tab !== 'today',
+        ];
 
-            // ── Visitors ──
-            'traffic'        => $this->trafficStats($sinceDate, $since, $prevFrom),
-            'trafficSeries'  => $this->trafficSeries($since, $now),
-            'topPages'       => $this->topPages($sinceDate),
-            'countries'      => $this->countries($visitorTableSince),
-            'referrers'      => $this->referrers($visitorTableSince),
-            'devices'        => $this->deviceBreakdown($visitorTableSince),
-            'visitorLog'     => $this->visitorLog($request),
-            'logFilters'     => $this->logFilters($request),
+        // Only the open tab's queries run. Each arm returns just what its
+        // partial reads, so an unopened tab costs nothing.
+        $data = match ($tab) {
+            'today'     => $this->todayTab(),
+            'traffic'   => [
+                'traffic'       => $this->trafficStats($sinceDate, $since, $prevFrom),
+                'trafficSeries' => $this->trafficSeries($since, $now),
+                'topPages'      => $this->topPages($sinceDate),
+            ],
+            'countries' => ['countries' => $this->countries($visitorTableSince, 20)],
+            'map'       => ['mapCountries' => $this->countries($visitorTableSince, null)],
+            'referrers' => ['referrers' => $this->referrers($visitorTableSince)],
+            'devices'   => ['devices' => $this->deviceBreakdown($visitorTableSince)],
+            'log'       => [
+                'visitorLog'     => $this->visitorLog($request, $days),
+                'logFilters'     => $this->logFilters($request),
+                'countryOptions' => $this->countries($visitorTableSince, null),
+            ],
+            'members'   => [
+                'members'      => $this->memberStats($since, $prevFrom),
+                'signupSeries' => $this->dailySeries('users', $since, $now),
+                'demographics' => $this->demographics(),
+                'health'       => $this->accountHealth(),
+                'leaders'      => $this->leaderboards(),
+            ],
+        };
 
-            // ── Members ──
-            'members'        => $this->memberStats($since, $prevFrom),
-            'signupSeries'   => $this->dailySeries('users', $since, $now),
-            'demographics'   => $this->demographics(),
-            'health'         => $this->accountHealth(),
-            'leaders'        => $this->leaderboards(),
-        ]);
+        return view('admin.statistics.index', $shared + $data);
+    }
+
+    /* ─────────────────────────────── Today ──────────────────────────────── */
+
+    /**
+     * Today against yesterday, from the page-view counters.
+     *
+     * There is no hourly breakdown to offer: `visitor_page_views` buckets by
+     * day, so an hourly chart would be invented. What *is* honest is who is on
+     * the site right now, which `visitors.updated_at` answers exactly.
+     */
+    private function todayTab(): array
+    {
+        $today     = now()->toDateString();
+        $yesterday = now()->subDay()->toDateString();
+
+        $day = fn (string $d) => DB::table('visitor_page_views')
+            ->where('day', $d)
+            ->selectRaw('COALESCE(SUM(hits), 0) AS views, COUNT(DISTINCT visitor_token) AS uniques')
+            ->first();
+
+        $now  = $day($today);
+        $prev = $day($yesterday);
+
+        $uniques = (int) $now->uniques;
+
+        // First-ever-seen today. Counted from `visitors`, which is a different
+        // table than the uniques above, so clamp rather than let rounding or a
+        // pruned row produce a negative "returning" count.
+        $newVisitors = Visitor::whereDate('created_at', $today)->count();
+        $returning   = max(0, $uniques - $newVisitors);
+
+        return [
+            'today' => [
+                'views'          => (int) $now->views,
+                'uniques'        => $uniques,
+                'views_trend'    => $this->movement((int) $now->views, (int) $prev->views),
+                'uniques_trend'  => $this->movement($uniques, (int) $prev->uniques),
+                'new_visitors'   => $newVisitors,
+                'returning'      => $returning,
+                'live'           => Visitor::where('updated_at', '>=', now()->subMinutes(self::LIVE_WINDOW_MINUTES))->count(),
+                'live_minutes'   => self::LIVE_WINDOW_MINUTES,
+            ],
+            'todayTopPages' => $this->topPages($today),
+            'liveVisitors'  => Visitor::where('updated_at', '>=', now()->startOfDay())
+                ->orderByDesc('updated_at')
+                ->limit(10)
+                ->get(),
+        ];
     }
 
     /* ────────────────────────────── Visitors ────────────────────────────── */
@@ -165,18 +254,25 @@ class StatisticsController extends Controller
      * Visitors and their lifetime hits grouped by country. `hits` is the
      * visitor's all-time total, so this ranks countries by engagement rather
      * than by views inside the window — labelled as such in the view.
+     *
+     * A null $limit returns every country: the map shades all of them, and the
+     * log's country filter must be able to offer all of them.
      */
-    private function countries(Carbon $since): array
+    private function countries(Carbon $since, ?int $limit = 12): array
     {
-        return Visitor::where('updated_at', '>=', $since)
+        $query = Visitor::where('updated_at', '>=', $since)
             ->selectRaw("COALESCE(country_code, 'XX') AS code,
                          COALESCE(country_name, 'Unknown') AS name,
                          COUNT(*) AS visitors,
                          SUM(hits) AS hits")
             ->groupBy('code', 'name')
-            ->orderByDesc('visitors')
-            ->limit(12)
-            ->get()
+            ->orderByDesc('visitors');
+
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+
+        return $query->get()
             ->map(fn ($r) => [
                 'code'     => $r->code,
                 'name'     => $r->name,
@@ -259,7 +355,7 @@ class StatisticsController extends Controller
     }
 
     /** The raw log: one row per visitor, filterable, paginated on its own key. */
-    private function visitorLog(Request $request)
+    private function visitorLog(Request $request, int $days)
     {
         $f = $this->logFilters($request);
 
@@ -291,10 +387,13 @@ class StatisticsController extends Controller
             default => $query->orderByDesc('updated_at'),
         };
 
+        // withQueryString() carries `tab` and `days` forward, so paging never
+        // drops the reader back onto the default tab.
         return $query
             ->paginate(self::LOG_PER_PAGE, ['*'], 'vpage')
             ->withQueryString()
-            ->fragment('visitor-log');
+            ->appends(['tab' => 'log', 'days' => $days])
+            ->fragment('tabpanel');
     }
 
     /* ────────────────────────────── Members ─────────────────────────────── */

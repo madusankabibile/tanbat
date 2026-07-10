@@ -1,16 +1,22 @@
 {{-- Period-over-period chip for a KPI. $t = ['current','prior','pct'].
      A null pct means the prior window was empty — no honest percentage exists
      against a zero baseline, so we state the raw count instead.
-     $window is the compared period's length in days; callers that always
-     compare 30 days (the dashboard) can leave it unset. --}}
+
+     $window      the compared period's length in days; callers that always
+                  compare 30 days (the dashboard) can leave it unset.
+     $currentText overrides the "in last N days" caption (zero-baseline case).
+     $compareText overrides the "vs prior N days" caption. The Today tab passes
+                  "vs yesterday", which "vs prior 1 days" cannot express. --}}
 @php
   $pct  = $t['pct'];
   $span = (int) ($window ?? 30);
+  $currentCaption = $currentText ?? "in last {$span} days";
+  $compareCaption = $compareText ?? "vs prior {$span} days";
 @endphp
 
 @if($pct === null)
   <span class="trend trend--flat">+{{ number_format($t['current']) }}</span>
-  <span>in last {{ $span }} days</span>
+  <span>{{ $currentCaption }}</span>
 @else
   @php $dir = $pct > 0 ? 'up' : ($pct < 0 ? 'down' : 'flat'); @endphp
   <span class="trend trend--{{ $dir }}">
@@ -23,5 +29,5 @@
     @endif
     {{ $pct > 0 ? '+' : '' }}{{ number_format($pct, 1) }}%
   </span>
-  <span>vs prior {{ $span }} days</span>
+  <span>{{ $compareCaption }}</span>
 @endif

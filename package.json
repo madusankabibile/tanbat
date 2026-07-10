@@ -6,6 +6,7 @@
         "build": "vite build"
     },
     "devDependencies": {
+        "@svg-maps/world": "^2.0.0",
         "autoprefixer": "^10.5.0",
         "axios": "^1.6.4",
         "flag-icons": "^7.5.0",

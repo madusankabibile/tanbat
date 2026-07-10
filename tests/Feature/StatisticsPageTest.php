@@ -16,6 +16,18 @@ use Tests\TestCase;
  */
 class StatisticsPageTest extends TestCase
 {
+    /** Every tab, and a marker that only that tab's partial can produce. */
+    private const TAB_MARKERS = [
+        'today'     => 'active in the last',
+        'traffic'   => 'Views per visitor',
+        'countries' => 'ranks countries by engagement',
+        'map'       => 'Where visitors are',
+        'referrers' => 'External sites sending visitors here',
+        'devices'   => 'Automated traffic',
+        'log'       => 'Visitor log',
+        'members'   => 'Account health',
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -51,18 +63,143 @@ class StatisticsPageTest extends TestCase
         $this->assertContains($response->status(), [403, 302], 'Non-admins must not reach the statistics page.');
     }
 
-    public function test_page_renders_both_halves_for_an_admin(): void
+    public function test_every_tab_renders_its_own_content_and_is_marked_current(): void
     {
-        $response = $this->actingAs($this->admin())->get('/admin/statistics');
+        $admin = $this->admin();
+
+        foreach (self::TAB_MARKERS as $tab => $marker) {
+            $response = $this->actingAs($admin)->get("/admin/statistics?tab={$tab}");
+
+            $response->assertOk();
+            // The fallback route also returns 200, so assert on page-unique markup.
+            $response->assertSee('admin-shell', false);
+            $response->assertSee($marker, false);
+
+            // Exactly one tab link is the current one, and it is this tab.
+            preg_match_all(
+                '/href="[^"]*tab=([a-z]+)[^"]*"\s+aria-current="page"/',
+                $response->getContent(),
+                $m
+            );
+            $this->assertSame([$tab], $m[1], "Tab '{$tab}' should be the only one marked aria-current.");
+        }
+    }
+
+    public function test_unknown_tab_falls_back_to_today(): void
+    {
+        $response = $this->actingAs($this->admin())->get('/admin/statistics?tab=bogus');
 
         $response->assertOk();
-        // Assert on markers unique to this page: the fallback route also returns 200.
-        $response->assertSee('admin-shell', false);
-        $response->assertSee('id="visitor-log"', false);
-        $response->assertSee('chartTraffic', false);
-        $response->assertSee('chartSignups', false);
-        $response->assertSee('Views per visitor');
-        $response->assertSee('Account health');
+        $response->assertSee(self::TAB_MARKERS['today'], false);
+        $this->assertStringContainsString('tab=today', $response->getContent());
+    }
+
+    public function test_default_tab_is_today_and_it_hides_the_window_selector(): void
+    {
+        $html = $this->actingAs($this->admin())->get('/admin/statistics')->getContent();
+
+        $this->assertStringContainsString(self::TAB_MARKERS['today'], $html);
+        // "Today" always means today, so there is no window to choose. Match the
+        // rendered attribute, not the bare class name — that also appears in the
+        // page's stylesheet as `.range__opt`.
+        $this->assertStringNotContainsString('class="range__opt"', $html);
+
+        // ...but a windowed tab does offer it.
+        $traffic = $this->actingAs($this->admin())->get('/admin/statistics?tab=traffic')->getContent();
+        $this->assertStringContainsString('class="range__opt"', $traffic);
+    }
+
+    public function test_range_selector_applies_to_windowed_tabs_and_rejects_unknown_windows(): void
+    {
+        $admin = $this->admin();
+
+        foreach ([7, 30, 90] as $days) {
+            $this->actingAs($admin)->get("/admin/statistics?tab=traffic&days={$days}")
+                ->assertOk()
+                ->assertSee("last {$days} days");
+        }
+
+        // An unsupported window silently falls back to 30 rather than erroring.
+        $this->actingAs($admin)->get('/admin/statistics?tab=traffic&days=9999')
+            ->assertOk()
+            ->assertSee('last 30 days');
+    }
+
+    public function test_visitor_log_filters_keep_the_tab_and_do_not_error(): void
+    {
+        $admin = $this->admin();
+
+        foreach (['all', 'human', 'bot'] as $traffic) {
+            $response = $this->actingAs($admin)
+                ->get("/admin/statistics?tab=log&traffic={$traffic}&sort=hits&q=1.1.1.1");
+
+            $response->assertOk();
+            // The filter form and the reset link must both come back to this tab,
+            // or paging/filtering would bounce the reader to the default tab.
+            $response->assertSee('name="tab" value="log"', false);
+            $response->assertSee('tab=log', false);
+        }
+    }
+
+    /** Render the map partial directly: the live DB may hold no geolocated visitor. */
+    private function renderMap(array $mapCountries): string
+    {
+        return view('admin.statistics.tabs._map', [
+            'mapCountries'     => $mapCountries,
+            'visitorTableDays' => 30,
+            'days'             => 30,
+        ])->render();
+    }
+
+    public function test_map_plots_countries_and_keeps_unplottable_ones_visible(): void
+    {
+        // The apostrophe is the point: it would close the single-quoted
+        // data-countries attribute without JSON_HEX_APOS in the partial.
+        $html = $this->renderMap([
+            ['code' => 'US', 'name' => 'United States',  'visitors' => 25, 'hits' => 60],
+            ['code' => 'GB', 'name' => 'United Kingdom', 'visitors' => 8,  'hits' => 10],
+            ['code' => 'CI', 'name' => "Côte d'Ivoire",  'visitors' => 1,  'hits' => 1],
+            ['code' => 'XX', 'name' => 'Unknown',        'visitors' => 6,  'hits' => 9],
+        ]);
+
+        // The map is served from our own origin, never a CDN.
+        $this->assertFileExists(public_path('maps/world.svg'));
+        $this->assertStringContainsString('/maps/world.svg', $html);
+
+        // The choropleth scales against the largest plotted country.
+        $this->assertStringContainsString('data-max="25"', $html);
+
+        $this->assertMatchesRegularExpression("/data-countries='[^']*'/", $html);
+        preg_match("/data-countries='([^']*)'/", $html, $m);
+        $decoded = json_decode($m[1], true);
+
+        $this->assertSame(JSON_ERROR_NONE, json_last_error(), 'data-countries must be valid JSON.');
+        $this->assertSame(['us', 'gb', 'ci'], array_keys($decoded));
+        $this->assertSame("Côte d'Ivoire", $decoded['ci']['n']);
+
+        // 'XX' has no shape on the map, so it is reported beneath it, not dropped.
+        $this->assertArrayNotHasKey('xx', $decoded);
+        $this->assertStringContainsString('could not be resolved to a country', $html);
+        $this->assertStringContainsString('6', $html);
+
+        // Every code plotted must have a path in the SVG, or it silently vanishes.
+        $svg = file_get_contents(public_path('maps/world.svg'));
+        foreach (array_keys($decoded) as $code) {
+            $this->assertStringContainsString("id=\"{$code}\"", $svg, "world.svg has no path for '{$code}'.");
+        }
+    }
+
+    public function test_map_shows_an_empty_state_when_no_country_can_be_resolved(): void
+    {
+        // Every visitor on a local install is 127.0.0.1 / ::1, which geolocates
+        // to nothing — the map must say so rather than fetch a 1.2MB SVG to
+        // shade zero countries.
+        $html = $this->renderMap([
+            ['code' => 'XX', 'name' => 'Local network', 'visitors' => 6, 'hits' => 81],
+        ]);
+
+        $this->assertStringContainsString('No countries to plot', $html);
+        $this->assertStringNotContainsString('/maps/world.svg', $html);
     }
 
     public function test_country_flag_resolves_real_codes_and_rejects_placeholders(): void
@@ -86,12 +223,11 @@ class StatisticsPageTest extends TestCase
 
     public function test_every_flag_the_page_renders_points_at_a_real_file(): void
     {
-        $html = $this->actingAs($this->admin())->get('/admin/statistics')->getContent();
+        // The members tab shows member countries, which carry real ISO codes.
+        $html = $this->actingAs($this->admin())->get('/admin/statistics?tab=members')->getContent();
 
         preg_match_all('/<img class="flag-img" src="([^"]+)"/', $html, $matches);
 
-        // A page with no visitors at all would legitimately render zero flags,
-        // so only the resolution of what *was* emitted is asserted here.
         foreach (array_unique($matches[1]) as $src) {
             $this->assertFileExists(
                 public_path('flags/' . basename(parse_url($src, PHP_URL_PATH))),
@@ -101,34 +237,6 @@ class StatisticsPageTest extends TestCase
 
         // Unknown countries fall back to the placeholder, never to a broken <img>.
         $this->assertStringNotContainsString('src=""', $html);
-    }
-
-    public function test_range_selector_accepts_known_windows_and_falls_back_otherwise(): void
-    {
-        $admin = $this->admin();
-
-        foreach ([7, 30, 90] as $days) {
-            $this->actingAs($admin)->get("/admin/statistics?days={$days}")
-                ->assertOk()
-                ->assertSee("last {$days} days");
-        }
-
-        // An unsupported window silently falls back to 30 rather than erroring.
-        $this->actingAs($admin)->get('/admin/statistics?days=9999')
-            ->assertOk()
-            ->assertSee('last 30 days');
-    }
-
-    public function test_visitor_log_filters_do_not_error(): void
-    {
-        $admin = $this->admin();
-
-        foreach (['all', 'human', 'bot'] as $traffic) {
-            $this->actingAs($admin)
-                ->get("/admin/statistics?traffic={$traffic}&sort=hits&q=1.1.1.1")
-                ->assertOk()
-                ->assertSee('id="visitor-log"', false);
-        }
     }
 
     public function test_user_agent_parser_classifies_the_cases_the_page_relies_on(): void

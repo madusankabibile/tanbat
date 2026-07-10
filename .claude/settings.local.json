@@ -64,7 +64,11 @@
       "Bash(git check-ignore *)",
       "PowerShell(php artisan test 2>&1 | Select-Object -Last 18)",
       "Bash(grep -E \"^\\\\.\\(htaccess\\)$|^index\\\\.php$|^server\\\\.php$\")",
-      "Bash(grep -E \"^\\\\?\\\\? [a-z]+probe|^\\\\?\\\\? .*\\\\.php$\")"
+      "Bash(grep -E \"^\\\\?\\\\? [a-z]+probe|^\\\\?\\\\? .*\\\\.php$\")",
+      "Bash(npm install *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type} %{size_download} bytes\\\\n\" --max-time 10 \"http://localhost/tanbat-xd/tanbat/maps/world.svg\")",
+      "PowerShell(php artisan test 2>&1 | Select-Object -Last 30)",
+      "PowerShell(php artisan test 2>&1 | Select-Object -Last 24)"
     ]
   }
 }
