@@ -42,6 +42,39 @@
 <meta name="twitter:title" content="{{ $pageTitle }}">
 <meta name="twitter:description" content="{{ $ogDesc ?: ($authorNm . ' on Tanbat') }}">
 @if($ogImage)<meta name="twitter:image" content="{{ $ogImage }}">@endif
+@php
+  // schema.org SocialMediaPosting — the structured-data signal for a post, with
+  // its like/comment counts exposed as interaction statistics.
+  $postLd = array_filter([
+      '@context'         => 'https://schema.org',
+      '@type'            => 'SocialMediaPosting',
+      'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $ogUrl],
+      'headline'         => \Illuminate\Support\Str::limit($pageTitle, 110, ''),
+      'url'              => $ogUrl,
+      'datePublished'    => optional($post->created_at)->toIso8601String(),
+      'dateModified'     => optional($post->updated_at)->toIso8601String(),
+      'image'            => $ogImage ? [$ogImage] : null,
+      'author'           => array_filter([
+          '@type' => 'Person',
+          'name'  => $authorNm,
+          'url'   => $u?->username ? route('profile', $u->username) : null,
+      ]),
+      'publisher'        => \App\Support\Seo::publisher(),
+      'interactionStatistic' => array_values(array_filter([
+          (int) $post->likes_count > 0 ? [
+              '@type' => 'InteractionCounter',
+              'interactionType' => 'https://schema.org/LikeAction',
+              'userInteractionCount' => (int) $post->likes_count,
+          ] : null,
+          (int) $post->comments_count > 0 ? [
+              '@type' => 'InteractionCounter',
+              'interactionType' => 'https://schema.org/CommentAction',
+              'userInteractionCount' => (int) $post->comments_count,
+          ] : null,
+      ])),
+  ], fn ($v) => !is_null($v) && $v !== '' && $v !== []);
+@endphp
+<script type="application/ld+json">{!! json_encode($postLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 
 <style>
   /* Engagement rail (shared look with the article page) */

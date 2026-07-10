@@ -1,6 +1,37 @@
 @extends('layouts.app')
 @section('title', 'Home — Tanbat')
 
+@push('head')
+@php
+    $siteRoot = rtrim((string) config('app.url'), '/') . '/';
+
+    // WebSite + SearchAction advertises the site search box to Google (the
+    // "sitelinks searchbox"); the Organization block ties the brand together.
+    $homeLd = [
+        [
+            '@context'        => 'https://schema.org',
+            '@type'           => 'WebSite',
+            'name'            => config('seo.site_name', 'Tanbat'),
+            'url'             => $siteRoot,
+            'potentialAction' => [
+                '@type'       => 'SearchAction',
+                'target'      => [
+                    '@type'       => 'EntryPoint',
+                    'urlTemplate' => $siteRoot . 'search?q={search_term_string}',
+                ],
+                'query-input' => 'required name=search_term_string',
+            ],
+        ],
+        ['@context' => 'https://schema.org'] + \App\Support\Seo::publisher(),
+    ];
+@endphp
+@include('partials._seo', [
+    'url'    => $siteRoot,
+    'title'  => config('seo.site_name', 'Tanbat') . ' — Connect & Share',
+    'jsonLd' => $homeLd,
+])
+@endpush
+
 {{-- Skeleton loader styles pushed to <head> so the shimmer cards are painted
      fully styled the instant they appear — independent of the body-level
      <style> blocks (which parse later) or the compiled app.css bundle. --}}

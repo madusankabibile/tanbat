@@ -1,6 +1,41 @@
 @extends('layouts.app')
 @section('title', $profile->name . ' — Tanbat')
 
+@push('head')
+@php
+    $profileUrl   = route('profile', $profile->username);
+    $profileImage = $profile->avatarUrl();
+    $profileDesc  = $profile->bio
+        ? \App\Support\Seo::describe($profile->bio)
+        : trim($profile->name . ' (@' . $profile->username . ') is on Tanbat — see their posts, photos and profile.');
+
+    // ProfilePage wrapping the Person, so search engines read this as a person's
+    // page rather than a generic article.
+    $profileLd = [
+        '@context'    => 'https://schema.org',
+        '@type'       => 'ProfilePage',
+        'dateCreated' => optional($profile->created_at)->toIso8601String(),
+        'mainEntity'  => array_filter([
+            '@type'         => 'Person',
+            'name'          => $profile->name,
+            'alternateName' => '@' . $profile->username,
+            'description'   => $profileDesc,
+            'image'         => $profileImage ?: null,
+            'url'           => $profileUrl,
+        ], fn ($v) => !is_null($v) && $v !== ''),
+    ];
+@endphp
+@include('partials._seo', [
+    'title'       => $profile->name,
+    'description' => $profileDesc,
+    'url'         => $profileUrl,
+    'image'       => $profileImage,
+    'imageAlt'    => $profile->name,
+    'type'        => 'profile',
+    'jsonLd'      => $profileLd,
+])
+@endpush
+
 @section('content')
 @auth
   @include('partials.navbar')

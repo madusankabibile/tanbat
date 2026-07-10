@@ -70,7 +70,12 @@
       "PowerShell(php artisan test 2>&1 | Select-Object -Last 30)",
       "PowerShell(php artisan test 2>&1 | Select-Object -Last 24)",
       "PowerShell(php artisan test 2>&1 | Select-Object -Last 28)",
-      "PowerShell(php artisan test 2>&1 | Select-Object -Last 26)"
+      "PowerShell(php artisan test 2>&1 | Select-Object -Last 26)",
+      "Bash(awk 'NR>=100 && NR<=175 && /middleware|Route::\\(get|prefix\\)|group|people/' routes/web.php)",
+      "PowerShell(php artisan test --filter=PublicSeoTest 2>&1 | Select-Object -Last 22)",
+      "PowerShell(php artisan test --filter=PublicSeoTest 2>&1 | Select-Object -Last 16)",
+      "PowerShell(php artisan test 2>&1 | Select-Object -Last 8)",
+      "PowerShell(php artisan test --filter=PublicSeoTest 2>&1 | Select-Object -Last 12)"
     ]
   }
 }

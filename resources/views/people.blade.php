@@ -1,6 +1,14 @@
 @extends('layouts.app')
 @section('title', 'People — Tanbat')
 
+@push('head')
+@include('partials._seo', [
+    'title'       => 'Discover People on Tanbat',
+    'description' => 'Find and connect with people on Tanbat. Browse members, follow creators, and grow your network.',
+    'url'         => route('people'),
+])
+@endpush
+
 @section('content')
 @include('partials.navbar')
 

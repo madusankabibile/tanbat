@@ -1,6 +1,48 @@
 @extends('layouts.app')
 @section('title', ($book->title ?? 'Book') . ' — Tanbat')
 
+@push('head')
+@php
+    $bookUrl   = route('books.show', $book->slug);
+    $bookImage = $book->cover_url ?: $post->featured_image_url;
+
+    // A real description when the source gave one, otherwise a composed line
+    // that still names the title, author and what the page offers.
+    $bookDesc = $book->description
+        ? \App\Support\Seo::describe($book->description)
+        : trim(($book->title ?: 'This book')
+            . ($book->author ? ' by ' . $book->author : '')
+            . ' — read online and download free on Tanbat.');
+
+    // schema.org/Book: the rich-result signal for book pages. array_filter drops
+    // any field the record is missing so no empty keys reach the markup.
+    $bookLd = array_filter([
+        '@context'    => 'https://schema.org',
+        '@type'       => 'Book',
+        'name'        => $book->title,
+        'author'      => $book->author ? ['@type' => 'Person', 'name' => $book->author] : null,
+        'inLanguage'  => $book->language ?: null,
+        'description' => $bookDesc,
+        'image'       => $bookImage ?: null,
+        'url'         => $bookUrl,
+        'bookFormat'  => 'https://schema.org/EBook',
+        // Only a clean 4-digit year is a valid datePublished.
+        'datePublished' => preg_match('/^\d{4}$/', (string) $book->year) ? (string) $book->year : null,
+        'publisher'   => $book->publisher ? ['@type' => 'Organization', 'name' => $book->publisher] : null,
+    ], fn ($v) => !is_null($v) && $v !== '');
+@endphp
+@include('partials._seo', [
+    'title'       => $book->title,
+    'description' => $bookDesc,
+    'url'         => $bookUrl,
+    'image'       => $bookImage,
+    'imageAlt'    => $book->title ? 'Cover of ' . $book->title : null,
+    'type'        => 'book',
+    'author'      => $book->author ?: null,
+    'jsonLd'      => $bookLd,
+])
+@endpush
+
 @section('content')
 @auth
   @include('partials.navbar')

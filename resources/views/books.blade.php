@@ -1,6 +1,14 @@
 @extends('layouts.app')
 @section('title', 'Books — Tanbat')
 
+@push('head')
+@include('partials._seo', [
+    'title'       => 'Free Books — Read & Download on Tanbat',
+    'description' => 'Browse thousands of free books on Tanbat. Search titles and authors, read online, and download ebooks across every genre.',
+    'url'         => route('books'),
+])
+@endpush
+
 @section('content')
 @auth
   @include('partials.navbar')
