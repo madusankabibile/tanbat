@@ -47,6 +47,20 @@ class VisitorGeo
         });
     }
 
+    /**
+     * Public ISO-3166 code → English name lookup, for callers that already hold
+     * a country code (e.g. `users.country`) and only need it made readable.
+     * Returns null for the empty/placeholder codes the users table stores.
+     */
+    public static function countryName(?string $code): ?string
+    {
+        $code = strtoupper(trim((string) $code));
+        if (!preg_match('/^[A-Z]{2}$/', $code) || $code === 'XX' || $code === 'T1') {
+            return null;
+        }
+        return self::name($code);
+    }
+
     private static function isPrivate(string $ip): bool
     {
         return filter_var(

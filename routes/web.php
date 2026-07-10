@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\BookController as AdminBookController;
 use App\Http\Controllers\Admin\BookSearchController as AdminBookSearchController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\StatisticsController as AdminStatisticsController;
 use App\Http\Controllers\Admin\PinterestController as AdminPinterestController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\RedditController as AdminRedditController;
@@ -227,6 +228,9 @@ Route::prefix('api')->group(function () {
 */
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    // Visitor + membership analytics
+    Route::get('statistics',           [AdminStatisticsController::class, 'index'])->name('statistics.index');
 
     // Users
     Route::get('users',                [AdminUserController::class, 'index'])->name('users.index');

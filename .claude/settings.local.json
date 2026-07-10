@@ -46,7 +46,20 @@
       "Bash(./vendor/bin/phpunit --filter TmpAdminDashboardTest)",
       "Bash(python -c ' *)",
       "Bash(./vendor/bin/phpunit --filter test_admin_dashboard_renders)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(grep -n \"AdminDashboardController\\\\|use App\\\\\\\\\\\\\\\\Http\\\\\\\\\\\\\\\\Controllers\\\\\\\\\\\\\\\\Admin\" routes/web.php)",
+      "Bash(grep -n \"'Str'\\\\|Support\\\\\\\\\\\\\\\\Str\" config/app.php)",
+      "Bash(grep -c '\\\\$pct\\(' resources/views/admin/statistics/index.blade.php)",
+      "Bash(sed -i 's/\\\\$pct\\(/\\\\$share\\(/g; s/\\\\$pct  = fn \\(\\\\$n, \\\\$d\\)/\\\\$share = fn \\(\\\\$n, \\\\$d\\)/' resources/views/admin/statistics/index.blade.php)",
+      "Bash(grep -n '\\\\$share' resources/views/admin/statistics/index.blade.php)",
+      "PowerShell(php artisan test tests/Feature/AdminStatisticsPageTest.php 2>&1 | Select-Object -Last 45)",
+      "PowerShell(php artisan test --filter=AdminStatisticsPageTest 2>&1 | Select-Object -Last 50)",
+      "Bash(find . -name \"AdminStatisticsPageTest.php\" -not -path \"./vendor/*\" -not -path \"./node_modules/*\")",
+      "Bash(echo \"exit=$?\")",
+      "PowerShell(php artisan test --filter=StatisticsPageTest 2>&1 | Select-Object -Last 45)",
+      "PowerShell(php artisan test --filter=StatisticsPageTest 2>&1 | Select-Object -Last 20)",
+      "PowerShell(php artisan test 2>&1 | Select-Object -Last 25)",
+      "PowerShell(php artisan test 2>&1 | Select-Object -Last 14)"
     ]
   }
 }
