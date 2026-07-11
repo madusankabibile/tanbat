@@ -22,8 +22,8 @@ class OmrmsArticle
             'title'       => (string) $post->title,
             'url'         => Omrms::articleUrl($post),
             'description' => Omrms::describe($post->short_description ?: $post->body),
-            'body'        => (string) $post->body,
-            'cover'       => $post->featured_image_url,
+            'body'        => Omrms::bodyImages($post->body),
+            'cover'       => Omrms::img($post->featured_image_url),
             'author'      => optional($post->user)->name ?: optional($post->user)->username,
             'category'    => optional($post->category)->name,
             'publishedAt' => $post->created_at,
@@ -34,7 +34,7 @@ class OmrmsArticle
             'related'     => $related->map(fn (Post $p) => [
                 'title' => (string) $p->title,
                 'url'   => Omrms::articleUrl($p),
-                'cover' => $p->featured_image_url,
+                'cover' => Omrms::img($p->featured_image_url),
                 'date'  => $p->created_at,
             ])->all(),
         ];
@@ -47,8 +47,8 @@ class OmrmsArticle
             'title'       => (string) $article->title,
             'url'         => Omrms::legacyUrl($article),
             'description' => Omrms::describe($article->body),
-            'body'        => (string) $article->body,
-            'cover'       => $article->coverUrl(),
+            'body'        => Omrms::bodyImages($article->body),
+            'cover'       => Omrms::img($article->coverUrl()),
             'author'      => $article->author_name ?: optional($article->user)->name,
             'category'    => $article->category_name,
             'publishedAt' => $article->published_at,
@@ -57,7 +57,7 @@ class OmrmsArticle
             'related'     => $related->map(fn (LegacyArticle $a) => [
                 'title' => (string) $a->title,
                 'url'   => Omrms::legacyUrl($a),
-                'cover' => $a->coverUrl(),
+                'cover' => Omrms::img($a->coverUrl()),
                 'date'  => $a->published_at,
             ])->all(),
         ];

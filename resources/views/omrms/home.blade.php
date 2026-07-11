@@ -41,11 +41,11 @@
 
   <div class="omr-grid">
     @forelse($articles as $post)
-      @php $url = Omrms::articleUrl($post); @endphp
+      @php $url = Omrms::articleUrl($post); $cover = Omrms::img($post->featured_image_url); @endphp
       <article class="omr-card">
         <a class="omr-card-fig" href="{{ $url }}">
-          @if($post->featured_image_url)
-            <img src="{{ $post->featured_image_url }}" alt="{{ $post->title }}" loading="lazy">
+          @if($cover)
+            <img src="{{ $cover }}" alt="{{ $post->title }}" loading="lazy">
           @else
             <span class="omr-card-noimg">{{ \Illuminate\Support\Str::substr($post->title, 0, 1) }}</span>
           @endif
