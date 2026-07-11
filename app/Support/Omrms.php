@@ -83,6 +83,42 @@ class Omrms
         return $username === '' ? null : 'https://tanbat.com/' . ltrim($username, '/');
     }
 
+    /**
+     * Site-wide article stats for the "Site stats" card. Cached for an hour —
+     * the SUM/COUNT over thousands of rows is too heavy to run per request.
+     * "articles" counts every reachable article URL: article-type posts plus
+     * orphan legacy rows (those with no backing post).
+     */
+    public static function siteStats(): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember('omrms:site-stats', now()->addHour(), function () {
+            $orphanLegacy = \App\Models\LegacyArticle::query()
+                ->whereNotIn('old_post_id', function ($q) {
+                    $q->select('legacy_post_id')->from('posts')->whereNotNull('legacy_post_id');
+                })->count();
+
+            return [
+                'articles'   => (int) \App\Models\Post::where('type', 'article')->count() + $orphanLegacy,
+                'categories' => (int) \App\Models\Category::whereHas('posts', fn ($q) => $q->where('type', 'article'))->count(),
+                'authors'    => (int) \App\Models\Post::where('type', 'article')->whereNotNull('user_id')->distinct()->count('user_id'),
+                'reads'      => (int) \App\Models\Post::where('type', 'article')->sum('views_count'),
+            ];
+        });
+    }
+
+    /** Compact number for stat tiles: 950 → "950", 12300 → "12.3k", 1_200_000 → "1.2M". */
+    public static function shortNum(int $n): string
+    {
+        if ($n >= 1000000) {
+            return rtrim(rtrim(number_format($n / 1000000, 1), '0'), '.') . 'M';
+        }
+        if ($n >= 1000) {
+            return rtrim(rtrim(number_format($n / 1000, 1), '0'), '.') . 'k';
+        }
+
+        return (string) $n;
+    }
+
     /** Rough reading time in minutes (~200 wpm), floored at 1. */
     public static function readingTime(?string $html): int
     {

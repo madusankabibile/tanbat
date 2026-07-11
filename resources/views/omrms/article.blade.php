@@ -191,6 +191,18 @@
       </div>
     </div>
 
+    {{-- Site-wide statistics card --}}
+    @php $site = Omrms::siteStats(); @endphp
+    <div class="omr-stats">
+      <h3 class="omr-rail-h">OMRMS in numbers</h3>
+      <div class="omr-stat-grid">
+        <div class="omr-stat"><b>{{ Omrms::shortNum($site['articles']) }}</b><span>Articles</span></div>
+        <div class="omr-stat"><b>{{ number_format($site['categories']) }}</b><span>Categories</span></div>
+        <div class="omr-stat"><b>{{ Omrms::shortNum($site['authors']) }}</b><span>Contributors</span></div>
+        <div class="omr-stat"><b>{{ Omrms::shortNum($site['reads']) }}</b><span>Total reads</span></div>
+      </div>
+    </div>
+
     @if(!empty($a['related']))
       <div>
         <h3 class="omr-rail-h">Related articles</h3>
