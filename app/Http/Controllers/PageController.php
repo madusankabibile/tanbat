@@ -6,6 +6,8 @@ use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\Visitor;
+use App\Support\Omrms;
+use App\Support\OmrmsArticle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,6 +20,12 @@ class PageController extends Controller
      */
     public function home()
     {
+        // omrms.com is an article-only companion site off this same codebase —
+        // its root is a grid of article cards, not the social feed.
+        if (Omrms::isActive()) {
+            return app(OmrmsController::class)->home(request());
+        }
+
         return view('home');
     }
 
@@ -226,6 +234,12 @@ class PageController extends Controller
                 ->limit(6 - $related->count())
                 ->get();
             $related = $related->concat($extra);
+        }
+
+        // omrms.com renders the same article in its own stripped-down,
+        // ad-supported, SEO-focused template (no navbar / login / comments).
+        if (Omrms::isActive()) {
+            return view('omrms.article', ['a' => OmrmsArticle::fromPost($post, $related)]);
         }
 
         return view('article-show', [

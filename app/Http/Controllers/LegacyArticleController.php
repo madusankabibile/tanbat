@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\LegacyArticle;
 use App\Models\Post;
+use App\Support\Omrms;
+use App\Support\OmrmsArticle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -62,6 +64,10 @@ class LegacyArticleController extends Controller
             ->limit(6)
             ->get();
 
+        if (Omrms::isActive()) {
+            return view('omrms.article', ['a' => OmrmsArticle::fromPost($post, $related)]);
+        }
+
         return view('article-show', [
             'post'       => $post,
             'liked'      => $myReaction !== null,
@@ -97,6 +103,10 @@ class LegacyArticleController extends Controller
             ->latest('published_at')
             ->limit(6)
             ->get(['id', 'old_post_id', 'title', 'slug', 'cover', 'published_at']);
+
+        if (Omrms::isActive()) {
+            return view('omrms.article', ['a' => OmrmsArticle::fromLegacy($article, $related)]);
+        }
 
         return view('legacy-article-show', [
             'article' => $article,

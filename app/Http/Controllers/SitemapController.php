@@ -33,6 +33,11 @@ class SitemapController extends Controller
 
     public function index(): Response
     {
+        // omrms.com gets its own articles-only sitemap with omrms.com URLs.
+        if (\App\Support\Omrms::isActive()) {
+            return app(OmrmsController::class)->sitemap();
+        }
+
         // Skip the cache under tests so assertions see current data.
         $xml = app()->environment('testing')
             ? $this->build()
