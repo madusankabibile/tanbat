@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\LegacyArticle;
 use App\Models\Post;
 use App\Support\Omrms;
@@ -40,6 +41,48 @@ class OmrmsController extends Controller
             ->withQueryString();
 
         return view('omrms.home', ['articles' => $articles]);
+    }
+
+    /** omrms.com /categories — every category that has published articles. */
+    public function categories(Request $request)
+    {
+        abort_unless(Omrms::isActive(), 404);
+
+        $categories = Category::query()
+            ->withCount(['posts as articles_count' => fn ($q) => $q->where('type', 'article')])
+            ->orderByDesc('articles_count')->orderBy('name')
+            ->get()
+            ->filter(fn ($c) => $c->articles_count > 0)
+            ->values();
+
+        return view('omrms.categories', ['categories' => $categories]);
+    }
+
+    /** omrms.com /category/{slug} — a grid of one category's articles. */
+    public function category(Request $request, string $slug)
+    {
+        abort_unless(Omrms::isActive(), 404);
+
+        $category = Category::where('slug', $slug)->firstOrFail();
+
+        $articles = Post::query()
+            ->with(['user:id,name,username', 'category:id,name,slug'])
+            ->where('type', 'article')->where('category_id', $category->id)
+            ->whereNotNull('slug')->where('slug', '!=', '')
+            ->orderByDesc('created_at')->orderByDesc('id')
+            ->paginate(self::PER_PAGE)
+            ->withPath(Omrms::url('/category/' . $category->slug))
+            ->withQueryString();
+
+        return view('omrms.category', ['category' => $category, 'articles' => $articles]);
+    }
+
+    /** omrms.com /how-to-publish — guide sending authors to tanbat.com to post. */
+    public function publish(Request $request)
+    {
+        abort_unless(Omrms::isActive(), 404);
+
+        return view('omrms.publish');
     }
 
     /**

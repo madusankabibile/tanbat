@@ -33,32 +33,12 @@
   <h1 class="omr-page-title">Latest Articles</h1>
   <p class="omr-page-sub u-sans">Handpicked reads, refreshed daily.</p>
 
-  {{-- Native ad below the header, above the grid --}}
-  <div class="omr-home-native">
-    <div class="omr-ad-label">Advertisement</div>
-    @include('omrms.partials.ad-native')
-  </div>
-
   <div class="omr-grid">
+    {{-- First cell is a native ad styled as a card --}}
+    @include('omrms.partials.native-card')
+
     @forelse($articles as $post)
-      @php $url = Omrms::articleUrl($post); $cover = Omrms::img($post->featured_image_url); @endphp
-      <article class="omr-card">
-        <a class="omr-card-fig" href="{{ $url }}">
-          @if($cover)
-            <img src="{{ $cover }}" alt="{{ $post->title }}" loading="lazy">
-          @else
-            <span class="omr-card-noimg">{{ \Illuminate\Support\Str::substr($post->title, 0, 1) }}</span>
-          @endif
-        </a>
-        <div class="omr-card-body">
-          @if($post->category)<span class="omr-cat">{{ $post->category->name }}</span>@endif
-          <h2><a href="{{ $url }}">{{ $post->title }}</a></h2>
-          <div class="omr-card-meta">
-            {{ optional($post->created_at)->format('M j, Y') }}
-            @if($post->user) · {{ $post->user->name ?: $post->user->username }}@endif
-          </div>
-        </div>
-      </article>
+      @include('omrms.partials.article-card', ['post' => $post])
     @empty
       <p class="u-sans" style="color:var(--muted)">No articles published yet.</p>
     @endforelse

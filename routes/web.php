@@ -45,6 +45,11 @@ Route::get('/',                  [PageController::class, 'home'])->name('home');
 // XML sitemap of the latest 50 articles. Registered here (before the root-level
 // /{username} route, whose charset also matches "sitemap.xml") so it resolves.
 Route::get('/sitemap.xml',       [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+// omrms.com-only pages (the controller 404s these on tanbat.com). Registered
+// here, before the root-level /{username} profile route, so they resolve.
+Route::get('/categories',        [\App\Http\Controllers\OmrmsController::class, 'categories'])->name('omrms.categories');
+Route::get('/category/{slug}',   [\App\Http\Controllers\OmrmsController::class, 'category'])->name('omrms.category');
+Route::get('/how-to-publish',    [\App\Http\Controllers\OmrmsController::class, 'publish'])->name('omrms.publish');
 // Legacy /home path — kept as a public alias for the many internal url('/home')
 // links; serves the same feed as /.
 Route::get('/home',              [PageController::class, 'home'])->name('home.feed');

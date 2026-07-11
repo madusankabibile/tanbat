@@ -72,6 +72,48 @@ class Omrms
     }
 
     /**
+     * Link to an author's ORIGINAL profile on tanbat.com. omrms.com has no
+     * profiles of its own — authorship lives on the main site — so bylines point
+     * back there. Returns null for anonymous / unknown authors.
+     */
+    public static function authorUrl(?string $username): ?string
+    {
+        $username = trim((string) $username);
+
+        return $username === '' ? null : 'https://tanbat.com/' . ltrim($username, '/');
+    }
+
+    /** Rough reading time in minutes (~200 wpm), floored at 1. */
+    public static function readingTime(?string $html): int
+    {
+        $words = str_word_count(strip_tags((string) $html));
+
+        return max(1, (int) ceil($words / 200));
+    }
+
+    /**
+     * Split article HTML into two halves at the nearest paragraph boundary, so a
+     * mid-article ad can be dropped between them. Returns [firstHalf, secondHalf];
+     * secondHalf is '' when the body is too short (or has no <p>) to split.
+     */
+    public static function halves(?string $html): array
+    {
+        $html  = (string) $html;
+        $parts = array_values(array_filter(
+            preg_split('~(?<=</p>)~i', $html) ?: [$html],
+            fn ($p) => trim((string) $p) !== ''
+        ));
+
+        if (count($parts) < 4) {
+            return [$html, ''];
+        }
+
+        $mid = (int) floor(count($parts) / 2);
+
+        return [implode('', array_slice($parts, 0, $mid)), implode('', array_slice($parts, $mid))];
+    }
+
+    /**
      * Rewrite an image URL that lives on THIS shared server (tanbat.com / the
      * APP_URL host / a relative path) so it is served from the current request
      * host instead. The uploads + storage dirs sit in the shared public_html,
