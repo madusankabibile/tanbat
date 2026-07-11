@@ -171,6 +171,32 @@
       color:var(--muted);margin-top:26px}
     .omr-back:hover{color:var(--brand-ink)}
 
+    /* Social share panel */
+    .omr-share{margin-top:36px;padding-top:22px;border-top:1px solid var(--line);
+      display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+    .omr-share-label{font-family:system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;
+      text-transform:uppercase;color:var(--muted)}
+    .omr-share-btns{display:flex;flex-wrap:wrap;gap:10px}
+    .omr-sh{position:relative;width:42px;height:42px;border-radius:11px;display:grid;place-items:center;
+      color:#fff;border:0;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease,filter .14s ease}
+    .omr-sh svg{width:20px;height:20px}
+    .omr-sh:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(31,36,48,.20);filter:brightness(1.05)}
+    .sh-fb{background:#1877f2}
+    .sh-x{background:#000}
+    .sh-wa{background:#25d366}
+    .sh-tg{background:#26a5e4}
+    .sh-in{background:#0a66c2}
+    .sh-pin{background:#e60023}
+    .sh-copy{background:var(--brand)}
+    .sh-copy .ic-ok{display:none}
+    .sh-copy.is-copied{background:#1a9d5a}
+    .sh-copy.is-copied .ic-link{display:none}
+    .sh-copy.is-copied .ic-ok{display:block}
+    .sh-copy-tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(4px);
+      background:#1f2430;color:#fff;font-family:system-ui,sans-serif;font-size:11px;font-weight:600;
+      padding:4px 9px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .14s,transform .14s}
+    .sh-copy.is-copied .sh-copy-tip{opacity:1;transform:translateX(-50%) translateY(0)}
+
     /* Simple content page (publish guide) */
     .omr-doc{max-width:760px;margin:12px auto 0}
     .omr-doc h1{font-size:38px;font-weight:700;letter-spacing:-.015em;margin:34px 0 10px}
