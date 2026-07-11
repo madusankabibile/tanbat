@@ -17,6 +17,11 @@ class SearchController extends Controller
     /** GET /search?q=... — full search results page */
     public function page(Request $request): View|\Illuminate\Http\RedirectResponse
     {
+        // omrms.com has its own guest-accessible, article-only search page.
+        if (\App\Support\Omrms::isActive()) {
+            return app(OmrmsController::class)->search($request);
+        }
+
         if (!Auth::check()) {
             return redirect()->route('home');
         }

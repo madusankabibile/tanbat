@@ -85,6 +85,59 @@ class OmrmsController extends Controller
         return view('omrms.publish');
     }
 
+    /** omrms.com /search?q= — full results page (articles only, paginated). */
+    public function search(Request $request)
+    {
+        abort_unless(Omrms::isActive(), 404);
+
+        $q = trim((string) $request->query('q', ''));
+        $articles = null;
+
+        if ($q !== '') {
+            $like = '%' . addcslashes($q, '%_\\') . '%';
+            $articles = Post::query()
+                ->with(['user:id,name,username', 'category:id,name,slug'])
+                ->where('type', 'article')->whereNotNull('slug')->where('slug', '!=', '')
+                ->where(fn ($w) => $w->where('title', 'like', $like)
+                    ->orWhere('short_description', 'like', $like)
+                    ->orWhere('description', 'like', $like))
+                ->orderByDesc('views_count')->orderByDesc('created_at')
+                ->paginate(self::PER_PAGE)
+                ->withPath(Omrms::url('/search'))
+                ->withQueryString();
+        }
+
+        return view('omrms.search', ['q' => $q, 'articles' => $articles]);
+    }
+
+    /** omrms.com /api/omrms/search?q= — JSON suggestions for the live search box. */
+    public function searchApi(Request $request)
+    {
+        abort_unless(Omrms::isActive(), 404);
+
+        $q = trim((string) $request->query('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $like = '%' . addcslashes($q, '%_\\') . '%';
+        $results = Post::query()
+            ->with(['category:id,name'])
+            ->where('type', 'article')->whereNotNull('slug')->where('slug', '!=', '')
+            ->where('title', 'like', $like)
+            ->orderByDesc('views_count')->orderByDesc('created_at')
+            ->limit(8)
+            ->get()
+            ->map(fn (Post $p) => [
+                'title'    => (string) $p->title,
+                'url'      => Omrms::articleUrl($p),
+                'cover'    => Omrms::img($p->featured_image_url),
+                'category' => optional($p->category)->name,
+            ]);
+
+        return response()->json(['results' => $results]);
+    }
+
     /**
      * omrms.com /sitemap.xml — articles only, all pointing at omrms.com URLs.
      * Cached per host so the shared tanbat.com sitemap cache is never reused.

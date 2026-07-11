@@ -40,12 +40,42 @@
     .omr-nav{display:flex;align-items:center;gap:6px;font-family:system-ui,sans-serif;font-size:14px;flex-wrap:wrap}
     .omr-nav a{padding:8px 14px;border-radius:8px;color:#3b4150;font-weight:600}
     .omr-nav a:hover{background:var(--chip);color:var(--brand-ink)}
-    .omr-nav a.omr-nav-cta{background:var(--brand);color:#fff}
+    .omr-nav a.omr-nav-cta{background:var(--brand);color:#fff;display:inline-flex;align-items:center;gap:6px}
     .omr-nav a.omr-nav-cta:hover{background:var(--brand-ink);color:#fff}
-    @media(max-width:640px){
-      .omr-head-in{min-height:0;padding:12px 0}
-      .omr-nav{width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+    .omr-nav-cta .lbl-plus{display:none}
+
+    /* Search box + live suggestions */
+    .omr-search{position:relative;flex:1 1 240px;max-width:440px;display:flex;align-items:center}
+    .omr-search-ic{position:absolute;left:13px;width:16px;height:16px;color:#9a958a;pointer-events:none}
+    .omr-search input{width:100%;padding:10px 14px 10px 38px;border:1px solid var(--line);border-radius:10px;
+      background:#fbfaf7;font-family:system-ui,sans-serif;font-size:14px;color:var(--ink)}
+    .omr-search input::-webkit-search-cancel-button{-webkit-appearance:none}
+    .omr-search input:focus{outline:none;border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(180,68,31,.13)}
+    .omr-suggest{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid var(--line);
+      border-radius:12px;box-shadow:0 16px 40px rgba(31,36,48,.16);overflow:hidden auto;z-index:40;max-height:72vh}
+    .omr-suggest[hidden]{display:none}
+    .omr-sug-item{display:grid;grid-template-columns:52px 1fr;gap:11px;align-items:center;padding:9px 12px;
+      border-bottom:1px solid #f2efe9}
+    .omr-sug-item:last-child{border-bottom:0}
+    .omr-sug-item:hover,.omr-sug-item.is-active{background:var(--chip)}
+    .omr-sug-fig{width:52px;height:40px;border-radius:7px;overflow:hidden;background:var(--chip);flex-shrink:0}
+    .omr-sug-fig img{width:100%;height:100%;object-fit:cover}
+    .omr-sug-txt{min-width:0}
+    .omr-sug-txt b{font-family:system-ui,sans-serif;font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.3;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .omr-sug-txt span{font-family:system-ui,sans-serif;font-size:11px;color:var(--brand-ink)}
+    .omr-sug-empty{padding:16px;font-family:system-ui,sans-serif;font-size:13px;color:var(--muted);text-align:center}
+
+    @media(max-width:760px){
+      .omr-head-in{min-height:0;padding:12px 0;gap:12px}
+      .omr-search{order:3;flex-basis:100%;max-width:none}
+      .omr-nav{order:2;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
       .omr-nav::-webkit-scrollbar{display:none}
+    }
+    @media(max-width:640px){
+      .omr-nav-cta{width:40px;height:40px;padding:0;border-radius:50%;justify-content:center}
+      .omr-nav-cta .lbl-full{display:none}
+      .omr-nav-cta .lbl-plus{display:inline;font-size:24px;line-height:1;font-weight:400;margin-top:-2px}
     }
 
     /* Footer */
@@ -80,6 +110,7 @@
     .omr-page-sub{color:var(--muted);font-family:system-ui,sans-serif;font-size:14px;margin:0}
     .omr-crumb{font-family:system-ui,sans-serif;font-size:13px;color:var(--muted);margin:26px 0 0}
     .omr-crumb a:hover{color:var(--brand-ink)}
+    .omr-noresults{font-family:system-ui,sans-serif;color:var(--muted);margin-top:30px;font-size:15px}
 
     /* Pagination */
     .omr-pager{display:flex;justify-content:center;gap:12px;margin:44px 0 0;font-family:system-ui,sans-serif}
@@ -221,10 +252,22 @@
         <span class="omr-logo">O</span>
         <span><b>OMRMS</b><small>Articles &amp; Reads</small></span>
       </a>
+
+      <form class="omr-search" role="search" method="get" autocomplete="off"
+            action="{{ $omr::url('/search') }}" data-api="{{ $omr::url('/api/omrms/search') }}">
+        <svg class="omr-search-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" name="q" value="{{ request()->query('q', '') }}"
+               placeholder="Search articles…" aria-label="Search articles">
+        <div class="omr-suggest" hidden></div>
+      </form>
+
       <nav class="omr-nav">
         <a href="{{ $omr::url('/') }}">Home</a>
         <a href="{{ $omr::url('/categories') }}">Categories</a>
-        <a class="omr-nav-cta" href="{{ $omr::url('/how-to-publish') }}">Publish an article</a>
+        <a class="omr-nav-cta" href="{{ $omr::url('/how-to-publish') }}" aria-label="Publish an article" title="Publish an article">
+          <span class="lbl-full">Publish an article</span>
+          <span class="lbl-plus" aria-hidden="true">+</span>
+        </a>
       </nav>
     </div>
   </header>
@@ -239,5 +282,54 @@
       <a href="{{ $omr::url('/how-to-publish') }}">Publish an article</a>
     </div>
   </footer>
+
+  <script>
+    (function () {
+      var form = document.querySelector('.omr-search');
+      if (!form) return;
+      var input = form.querySelector('input[name=q]');
+      var box   = form.querySelector('.omr-suggest');
+      var api   = form.getAttribute('data-api');
+      var timer, ctrl;
+
+      function esc(s) {
+        return String(s || '').replace(/[&<>"]/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+      }
+      function hide() { box.hidden = true; }
+      function render(items) {
+        if (!items.length) {
+          box.innerHTML = '<div class="omr-sug-empty">No articles found</div>';
+        } else {
+          box.innerHTML = items.map(function (it) {
+            var img = it.cover ? '<img src="' + esc(it.cover) + '" alt="" loading="lazy">' : '';
+            var cat = it.category ? '<span>' + esc(it.category) + '</span>' : '';
+            return '<a class="omr-sug-item" href="' + esc(it.url) + '">' +
+                     '<span class="omr-sug-fig">' + img + '</span>' +
+                     '<span class="omr-sug-txt"><b>' + esc(it.title) + '</b>' + cat + '</span></a>';
+          }).join('');
+        }
+        box.hidden = false;
+      }
+
+      input.addEventListener('input', function () {
+        var q = input.value.trim();
+        clearTimeout(timer);
+        if (q.length < 2) { hide(); return; }
+        timer = setTimeout(function () {
+          if (ctrl) { ctrl.abort(); }
+          ctrl = ('AbortController' in window) ? new AbortController() : null;
+          fetch(api + '?q=' + encodeURIComponent(q), ctrl ? { signal: ctrl.signal } : {})
+            .then(function (r) { return r.json(); })
+            .then(function (d) { render(d.results || []); })
+            .catch(function () {});
+        }, 180);
+      });
+      input.addEventListener('focus', function () { if (input.value.trim().length >= 2 && box.innerHTML) box.hidden = false; });
+      document.addEventListener('click', function (e) { if (!form.contains(e.target)) hide(); });
+      form.addEventListener('submit', function () { if (!input.value.trim()) return false; });
+    })();
+  </script>
 </body>
 </html>

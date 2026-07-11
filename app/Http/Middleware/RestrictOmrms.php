@@ -22,6 +22,8 @@ class RestrictOmrms
         'home.feed',       // /home (alias)
         'articles.show',   // /articles/{slug}       — native article
         'legacy.article',  // /blogs/{id}/{slug}      — migrated legacy article
+        'search',          // /search?q=              — article search results
+        'omrms.search.api',// /api/omrms/search       — live search JSON (in web.php)
         'omrms.categories',// /categories
         'omrms.category',  // /category/{slug}
         'omrms.publish',   // /how-to-publish

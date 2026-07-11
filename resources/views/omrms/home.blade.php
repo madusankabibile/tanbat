@@ -8,11 +8,21 @@
 @php
     $home = Omrms::url('/');
     $desc = 'Read the latest articles on OMRMS — a growing library of stories and guides across every topic.';
+    // WebSite + SearchAction advertises the article search box to Google, which
+    // can render it as a sitelinks search box under the omrms.com result.
     $ld = [
         '@context' => 'https://schema.org',
         '@type'    => 'WebSite',
         'name'     => 'OMRMS',
         'url'      => $home,
+        'potentialAction' => [
+            '@type'       => 'SearchAction',
+            'target'      => [
+                '@type'       => 'EntryPoint',
+                'urlTemplate' => Omrms::url('/search') . '?q={search_term_string}',
+            ],
+            'query-input' => 'required name=search_term_string',
+        ],
     ];
 @endphp
 <link rel="canonical" href="{{ $articles->currentPage() > 1 ? $articles->url($articles->currentPage()) : $home }}">
