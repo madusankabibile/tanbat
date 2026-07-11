@@ -36,6 +36,9 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            // Confine omrms.com to its article-only pages (404s everything else).
+            // No-op on tanbat.com. Runs after routing so the route name is known.
+            \App\Http\Middleware\RestrictOmrms::class,
             \App\Http\Middleware\RecordVisitor::class,
         ],
 
