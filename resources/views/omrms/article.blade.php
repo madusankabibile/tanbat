@@ -203,6 +203,9 @@
       </div>
     </div>
 
+    {{-- Recent visitors (live) --}}
+    @include('omrms.partials.visitors')
+
     @if(!empty($a['related']))
       <div>
         <h3 class="omr-rail-h">Related articles</h3>

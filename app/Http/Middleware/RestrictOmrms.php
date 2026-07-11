@@ -24,6 +24,7 @@ class RestrictOmrms
         'legacy.article',  // /blogs/{id}/{slug}      — migrated legacy article
         'search',          // /search?q=              — article search results
         'omrms.search.api',// /api/omrms/search       — live search JSON (in web.php)
+        'omrms.visitors.api', // /api/omrms/visitors  — recent-visitors JSON (in web.php)
         'omrms.categories',// /categories
         'omrms.category',  // /category/{slug}
         'omrms.publish',   // /how-to-publish

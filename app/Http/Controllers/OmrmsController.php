@@ -138,6 +138,15 @@ class OmrmsController extends Controller
         return response()->json(['results' => $results]);
     }
 
+    /** omrms.com /api/omrms/visitors — JSON feed for the "Recent visitors" card. */
+    public function visitorsApi(Request $request)
+    {
+        abort_unless(Omrms::isActive(), 404);
+
+        return response()->json(['visitors' => Omrms::recentVisitors(8)])
+            ->header('Cache-Control', 'no-store, max-age=0');
+    }
+
     /**
      * omrms.com /sitemap.xml — articles only, all pointing at omrms.com URLs.
      * Cached per host so the shared tanbat.com sitemap cache is never reused.

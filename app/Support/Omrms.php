@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\LegacyArticle;
 use App\Models\Post;
+use App\Models\Visitor;
 use Illuminate\Support\Str;
 
 /**
@@ -28,10 +29,43 @@ class Omrms
         return $host === 'omrms.com' || str_ends_with($host, '.omrms.com');
     }
 
+    /** Canonical public origin for omrms.com (used off-host, e.g. in tanbat admin). */
+    public const CANONICAL_URL = 'https://omrms.com';
+
     /** Site/brand name used in <title>, og:site_name and the JSON-LD publisher. */
     public static function siteName(): string
     {
         return 'OMRMS';
+    }
+
+    /**
+     * omrms.com URL for a post, built from the FIXED canonical host rather than
+     * the request host. Use this off-domain — e.g. links in the tanbat admin,
+     * which runs under tanbat.com but wants to point at the omrms.com article.
+     */
+    public static function canonicalArticleUrl(Post $post): string
+    {
+        return self::CANONICAL_URL . self::articlePath($post);
+    }
+
+    /**
+     * Most recent site visitors for the "Recent visitors" card, formatted for
+     * display. Same shape PageController@visitors returns for tanbat's widget.
+     */
+    public static function recentVisitors(int $limit = 8): array
+    {
+        return Visitor::query()
+            ->orderByDesc('updated_at')
+            ->limit($limit)
+            ->get(['country_code', 'country_name', 'page', 'referrer', 'updated_at'])
+            ->map(fn (Visitor $v) => [
+                'country_code' => $v->country_code ? strtolower($v->country_code) : null,
+                'country_name' => $v->country_name ?: 'Unknown',
+                'page'         => $v->page ?: '/',
+                'referrer'     => $v->referrer ? (parse_url($v->referrer, PHP_URL_HOST) ?: $v->referrer) : null,
+                'when'         => ($v->updated_at?->diffForHumans(null, true) ?? '') . ' ago',
+            ])
+            ->all();
     }
 
     /**

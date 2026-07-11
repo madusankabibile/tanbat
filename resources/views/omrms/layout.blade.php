@@ -184,6 +184,27 @@
     .omr-stat b{display:block;font-size:19px;font-weight:800;color:var(--ink);line-height:1.1}
     .omr-stat span{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 
+    /* Recent visitors card */
+    .omr-vw{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+    .omr-vw-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+    .omr-vw-live{display:inline-flex;align-items:center;gap:5px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;
+      letter-spacing:.06em;text-transform:uppercase;color:#1a9d5a}
+    .omr-vw-live i{width:7px;height:7px;border-radius:50%;background:#1a9d5a;animation:omr-vw-pulse 1.8s infinite}
+    @keyframes omr-vw-pulse{0%{box-shadow:0 0 0 0 rgba(26,157,90,.5)}70%{box-shadow:0 0 0 6px rgba(26,157,90,0)}100%{box-shadow:0 0 0 0 rgba(26,157,90,0)}}
+    .omr-vw-list{list-style:none;margin:0;padding:6px}
+    .omr-vw-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;font-family:system-ui,sans-serif}
+    .omr-vw-row:hover{background:var(--chip)}
+    .omr-vw-flag{width:22px;height:16px;border-radius:3px;flex-shrink:0;overflow:hidden;background:var(--chip);
+      display:grid;place-items:center;font-size:11px;box-shadow:0 0 0 1px rgba(31,36,48,.08)}
+    .omr-vw-flag img{width:100%;height:100%;object-fit:cover}
+    .omr-vw-flag--code{font-size:8.5px;font-weight:800;color:#6b7280;letter-spacing:.4px}
+    .omr-vw-who{display:flex;flex-direction:column;min-width:0;line-height:1.25;flex:1}
+    .omr-vw-country{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .omr-vw-meta{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .omr-vw-page{color:var(--brand-ink);font-weight:600}
+    .omr-vw-when{font-size:10px;color:#9a958a;flex-shrink:0;white-space:nowrap}
+    .omr-vw-empty{padding:18px 12px;text-align:center;font-size:12px;color:var(--muted);font-family:system-ui,sans-serif}
+
     /* Ads */
     .omr-ad{display:flex;justify-content:center;align-items:center;overflow:hidden}
     .omr-ad-square{min-height:250px}

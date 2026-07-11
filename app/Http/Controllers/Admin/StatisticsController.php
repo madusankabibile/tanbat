@@ -43,6 +43,7 @@ class StatisticsController extends Controller
         'devices'   => 'Devices',
         'log'       => 'Visitor log',
         'members'   => 'Members',
+        'omrms'     => 'OMRMS',
     ];
 
     private const VISITOR_TABLE_RETENTION_DAYS = 30;
@@ -115,6 +116,7 @@ class StatisticsController extends Controller
                 'health'       => $this->accountHealth(),
                 'leaders'      => $this->leaderboards(),
             ],
+            'omrms'     => ['omrms' => $this->omrmsStats($since)],
         };
 
         return view('admin.statistics.index', $shared + $data);
@@ -593,6 +595,33 @@ class StatisticsController extends Controller
             ->all();
 
         return compact('byPosts', 'byComments', 'byLikes');
+    }
+
+    /* ─────────────────────────────── OMRMS ──────────────────────────────── */
+
+    /**
+     * Stats for the omrms.com companion article site. omrms and tanbat share one
+     * database, and the visitor tables record only the path (not the host), so
+     * these are content + engagement figures (article counts, reads = views),
+     * not a domain-split of raw traffic. `newArticles` honours the window.
+     */
+    private function omrmsStats(Carbon $since): array
+    {
+        $top = \App\Models\Post::query()
+            ->where('type', 'article')->whereNotNull('slug')->where('slug', '!=', '')
+            ->orderByDesc('views_count')
+            ->limit(10)
+            ->get(['id', 'slug', 'title', 'views_count', 'is_legacy', 'legacy_post_id']);
+
+        return [
+            'headline'    => \App\Support\Omrms::siteStats(),
+            'newArticles' => \App\Models\Post::where('type', 'article')->where('created_at', '>=', $since)->count(),
+            'top'         => $top->map(fn ($p) => [
+                'title' => (string) $p->title,
+                'url'   => \App\Support\Omrms::canonicalArticleUrl($p),
+                'views' => (int) $p->views_count,
+            ])->all(),
+        ];
     }
 
     /* ────────────────────────────── Helpers ─────────────────────────────── */

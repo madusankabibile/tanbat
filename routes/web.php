@@ -144,6 +144,8 @@ Route::prefix('auth')->name('auth.')->group(function () {
 Route::prefix('api')->group(function () {
     // omrms.com live article search (JSON). 404s on tanbat.com via the controller.
     Route::get('/omrms/search', [\App\Http\Controllers\OmrmsController::class, 'searchApi'])->name('omrms.search.api');
+    // omrms.com "Recent visitors" card feed (JSON). 404s on tanbat.com.
+    Route::get('/omrms/visitors', [\App\Http\Controllers\OmrmsController::class, 'visitorsApi'])->name('omrms.visitors.api');
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/sidebar',    [PageController::class, 'sidebar']);
     Route::get('/visitors',   [PageController::class, 'visitors']);
