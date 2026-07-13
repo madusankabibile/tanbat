@@ -47,6 +47,9 @@ class RecordVisitor
             $ua = substr((string) $request->userAgent(), 0, 255);
             $token = sha1($ip . '|' . $ua);
             $path = substr('/' . ltrim($request->path(), '/'), 0, 255);
+            // tanbat.com and omrms.com share this codebase and this database, so
+            // the path alone cannot say which site was reached. The host can.
+            $host = substr(strtolower((string) $request->getHost()), 0, 100);
 
             [$code, $name] = VisitorGeo::lookup($ip, $request->header('CF-IPCountry'));
 
@@ -64,6 +67,7 @@ class RecordVisitor
                 'ip_address'   => $ip,
                 'country_code' => $code,
                 'country_name' => $name,
+                'host'         => $host,
                 'page'         => $path,
                 'referrer'     => $referrer ? substr($referrer, 0, 255) : null,
                 'user_agent'   => $ua,
@@ -71,7 +75,7 @@ class RecordVisitor
             $visitor->hits = ($visitor->exists ? (int) $visitor->hits : 0) + 1;
             $visitor->save();
 
-            $this->recordPageView($token, $path);
+            $this->recordPageView($token, $host, $path);
 
             // Occasionally prune rows we'll never show to keep the tables small.
             if (random_int(1, 50) === 1) {
@@ -86,21 +90,21 @@ class RecordVisitor
     }
 
     /**
-     * Bump today's hit counter for this visitor + path.
+     * Bump today's hit counter for this visitor + host + path.
      *
-     * A single atomic upsert against the vpv_token_path_day_unique key: two
+     * A single atomic upsert against the vpv_token_host_path_day_unique key: two
      * concurrent requests from the same visitor can't lose a hit the way a
      * read-then-write would. MySQL/MariaDB syntax, which is what this app runs on.
      */
-    private function recordPageView(string $token, string $path): void
+    private function recordPageView(string $token, string $host, string $path): void
     {
         $now = now();
 
         DB::statement(
-            'INSERT INTO visitor_page_views (visitor_token, path, day, hits, created_at, updated_at)
-             VALUES (?, ?, ?, 1, ?, ?)
+            'INSERT INTO visitor_page_views (visitor_token, host, path, day, hits, created_at, updated_at)
+             VALUES (?, ?, ?, ?, 1, ?, ?)
              ON DUPLICATE KEY UPDATE hits = hits + 1, updated_at = VALUES(updated_at)',
-            [$token, $path, $now->toDateString(), $now, $now]
+            [$token, $host, $path, $now->toDateString(), $now, $now]
         );
     }
 

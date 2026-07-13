@@ -26,6 +26,7 @@ class StatisticsPageTest extends TestCase
         'devices'   => 'Automated traffic',
         'log'       => 'Visitor log',
         'members'   => 'Account health',
+        'omrms'     => 'Most reached omrms.com pages',
     ];
 
     protected function setUp(): void
@@ -159,7 +160,7 @@ class StatisticsPageTest extends TestCase
     {
         // The other tabs are multi-day aggregates, and two own Chart.js canvases
         // that an innerHTML swap would destroy.
-        foreach (['traffic', 'countries', 'map', 'referrers', 'devices', 'log', 'members'] as $tab) {
+        foreach (['traffic', 'countries', 'map', 'referrers', 'devices', 'log', 'members', 'omrms'] as $tab) {
             $html = $this->actingAs($this->admin())->get("/admin/statistics?tab={$tab}")->getContent();
             $this->assertStringNotContainsString('id="liveBar"', $html, "Tab '{$tab}' must not poll.");
         }
@@ -201,19 +202,33 @@ class StatisticsPageTest extends TestCase
         }
     }
 
-    /** Render the referrers partial directly: the live DB may hold no external referrer. */
-    private function renderReferrers(?string $refHost, array $refLinks = []): string
+    /** Render the referrer panel directly: the live DB may hold no external referrer. */
+    private function renderReferrers(?string $refHost, array $refLinks = [], string $tab = 'referrers'): string
     {
-        return view('admin.statistics.tabs._referrers', [
+        return view('admin.statistics._referrer-panel', [
             'referrers' => [
                 ['host' => 'www.google.com',       'visitors' => 4, 'hits' => 9],
                 ['host' => 'news.ycombinator.com', 'visitors' => 1, 'hits' => 2],
             ],
             'refHost'          => $refHost,
             'refLinks'         => $refLinks,
+            'tab'              => $tab,
             'visitorTableDays' => 30,
             'days'             => 30,
         ])->render();
+    }
+
+    /** One (link → landing page) row, on the site given by $host. */
+    private function refLink(string $host, string $page): array
+    {
+        return [
+            'url'       => 'https://www.google.com/search?q=tanbat',
+            'host'      => $host,
+            'page'      => $page,
+            'visitors'  => 3,
+            'hits'      => 7,
+            'last_seen' => now()->subHour(),
+        ];
     }
 
     public function test_a_referrer_opens_the_exact_links_and_the_pages_they_landed_on(): void
@@ -224,13 +239,7 @@ class StatisticsPageTest extends TestCase
         $this->assertStringContainsString('ref=news.ycombinator.com', $closed);
         $this->assertStringNotContainsString('class="drill"', $closed);
 
-        $open = $this->renderReferrers('www.google.com', [[
-            'url'       => 'https://www.google.com/search?q=tanbat',
-            'page'      => '/books',
-            'visitors'  => 3,
-            'hits'      => 7,
-            'last_seen' => now()->subHour(),
-        ]]);
+        $open = $this->renderReferrers('www.google.com', [$this->refLink('tanbat.com', '/books')]);
 
         // The whole point of the drill-down: the exact link clicked, and the exact
         // page it opened, both reachable.
@@ -244,16 +253,68 @@ class StatisticsPageTest extends TestCase
         $this->assertStringContainsString('days=30', $open);
     }
 
+    public function test_a_landing_page_links_at_the_site_it_was_actually_reached_on(): void
+    {
+        // Both sites are served from this one codebase, so the page a referrer
+        // opened is only reachable on the host the visit was recorded under.
+        $omrms = $this->renderReferrers('www.google.com', [$this->refLink('omrms.com', '/articles/hello')]);
+        $this->assertStringContainsString('href="https://omrms.com/articles/hello"', $omrms);
+        $this->assertStringContainsString('on omrms.com', $omrms);
+
+        $tanbat = $this->renderReferrers('www.google.com', [$this->refLink('tanbat.com', '/articles/hello')]);
+        $this->assertStringContainsString('href="' . url('/articles/hello') . '"', $tanbat);
+        $this->assertStringNotContainsString('https://omrms.com/articles/hello', $tanbat);
+    }
+
+    public function test_the_omrms_tab_keeps_its_referrer_drilldown_on_its_own_tab(): void
+    {
+        // The OMRMS tab renders the same panel; opening a host there must not
+        // bounce the reader over to the Referrers tab.
+        $html = $this->renderReferrers(null, [], 'omrms');
+
+        $this->assertStringContainsString('tab=omrms', $html);
+        $this->assertStringNotContainsString('tab=referrers', $html);
+    }
+
     public function test_an_unknown_referrer_host_opens_nothing(): void
     {
         // `ref` is only honoured when it matches a host actually in the window, so
         // an invented one can neither drill nor be echoed back into the page.
-        $html = $this->actingAs($this->admin())
-            ->get('/admin/statistics?tab=referrers&ref=not-a-real-referrer.example')
-            ->getContent();
+        foreach (['referrers', 'omrms'] as $tab) {
+            $html = $this->actingAs($this->admin())
+                ->get("/admin/statistics?tab={$tab}&ref=not-a-real-referrer.example")
+                ->getContent();
 
-        $this->assertStringNotContainsString('class="drill"', $html);
-        $this->assertStringNotContainsString('not-a-real-referrer.example', $html);
+            $this->assertStringNotContainsString('class="drill"', $html);
+            $this->assertStringNotContainsString('not-a-real-referrer.example', $html);
+        }
+    }
+
+    public function test_omrms_reach_counts_only_omrms_hosts(): void
+    {
+        // Both visitor tables carry the host now, so every reach figure on the tab
+        // must be constrained to it — otherwise tanbat's traffic would be reported
+        // as omrms's.
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+        $this->actingAs($this->admin())->get('/admin/statistics?tab=omrms')->assertOk();
+        $queries = \Illuminate\Support\Facades\DB::getQueryLog();
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+
+        $reach = array_filter(
+            $queries,
+            fn ($q) => str_contains($q['query'], 'visitor_page_views') || str_contains($q['query'], 'from `visitors`')
+        );
+        $this->assertNotEmpty($reach, 'The OMRMS tab must read the visitor tables.');
+
+        foreach ($reach as $q) {
+            // The one exception is the all-sites denominator behind "share of traffic".
+            $isDenominator = str_contains($q['query'], 'sum(`hits`)') && !str_contains($q['query'], '`host`');
+            if ($isDenominator) {
+                continue;
+            }
+            $this->assertStringContainsString('`host`', $q['query'], "Unscoped reach query: {$q['query']}");
+            $this->assertContains(\App\Support\Omrms::HOST, $q['bindings'], "Reach query not bound to omrms.com: {$q['query']}");
+        }
     }
 
     /** Render the map partial directly: the live DB may hold no geolocated visitor. */

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Post;
 use App\Models\User;
 use App\Models\Visitor;
 use App\Services\UserAgentParser;
 use App\Services\VisitorGeo;
+use App\Support\Omrms;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -121,7 +123,7 @@ class StatisticsController extends Controller
                 'health'       => $this->accountHealth(),
                 'leaders'      => $this->leaderboards(),
             ],
-            'omrms'     => ['omrms' => $this->omrmsStats($since)],
+            'omrms'     => $this->omrmsTab($request, $sinceDate, $since, $prevFrom, $visitorTableSince),
         };
 
         return view('admin.statistics.index', $shared + $data);
@@ -337,17 +339,20 @@ class StatisticsController extends Controller
     }
 
     /**
-     * The referrers tab: hosts ranked by visitors, plus the exact links behind
-     * the one host the reader has opened (`?ref=<host>`).
+     * The referrer panel: referring hosts ranked by visitors, plus the exact
+     * links behind the one the reader has opened (`?ref=<host>`).
      *
-     * The drill-down is honest because RecordVisitor writes `page` and
+     * The drill-down is honest because RecordVisitor writes `page`, `host` and
      * `referrer` in the *same* request and nulls the referrer on same-host
      * navigation: any row still carrying a referrer therefore holds a genuine
-     * pair — the exact link that was clicked, and the exact page it opened.
+     * triple — the link that was clicked, and the page (on which site) it opened.
+     *
+     * `$omrmsOnly` restricts it to arrivals that landed on omrms.com, which is
+     * what the OMRMS tab renders with the very same partial.
      */
-    private function referrersTab(Request $request, Carbon $since): array
+    private function referrersTab(Request $request, Carbon $since, bool $omrmsOnly = false): array
     {
-        $byHost = $this->referrerRows($since);
+        $byHost = $this->referrerRows($since, $omrmsOnly);
 
         $ref  = (string) $request->query('ref', '');
         $host = $byHost->has($ref) ? $ref : null;
@@ -375,29 +380,37 @@ class StatisticsController extends Controller
      *
      * @return \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, Visitor>>
      */
-    private function referrerRows(Carbon $since)
+    private function referrerRows(Carbon $since, bool $omrmsOnly = false)
     {
-        return Visitor::where('updated_at', '>=', $since)
+        $query = Visitor::where('updated_at', '>=', $since)
             ->whereNotNull('referrer')
-            ->where('referrer', '!=', '')
-            ->get(['referrer', 'page', 'hits', 'updated_at'])
+            ->where('referrer', '!=', '');
+
+        if ($omrmsOnly) {
+            Omrms::onlyHost($query);
+        }
+
+        return $query
+            ->get(['referrer', 'host', 'page', 'hits', 'updated_at'])
             ->groupBy(fn ($r) => parse_url($r->referrer, PHP_URL_HOST) ?: $r->referrer);
     }
 
     /**
      * One row per (referring link, page it opened) pair for a single host,
      * busiest first. Visitors who clicked the same link onto the same page
-     * collapse into one row.
+     * collapse into one row. `host` is the site that page was reached on, so
+     * the view can link at the right domain.
      *
      * @param  \Illuminate\Support\Collection<int, Visitor>  $rows
      */
     private function referrerLinks($rows): array
     {
         return $rows
-            // NUL can't appear in either column, so it can't collide two pairs.
-            ->groupBy(fn ($r) => $r->referrer . "\0" . ($r->page ?? ''))
+            // NUL can't appear in any of these columns, so it can't collide two rows.
+            ->groupBy(fn ($r) => $r->referrer . "\0" . ($r->host ?? '') . "\0" . ($r->page ?? ''))
             ->map(fn ($group) => [
                 'url'       => (string) $group->first()->referrer,
+                'host'      => (string) ($group->first()->host ?? ''),
                 'page'      => (string) ($group->first()->page ?? ''),
                 'visitors'  => $group->count(),
                 'hits'      => (int) $group->sum('hits'),
@@ -654,28 +667,124 @@ class StatisticsController extends Controller
     /* ─────────────────────────────── OMRMS ──────────────────────────────── */
 
     /**
-     * Stats for the omrms.com companion article site. omrms and tanbat share one
-     * database, and the visitor tables record only the path (not the host), so
-     * these are content + engagement figures (article counts, reads = views),
-     * not a domain-split of raw traffic. `newArticles` honours the window.
+     * The omrms.com companion article site.
+     *
+     * Since the host is recorded on both visitor tables, everything here is a
+     * true domain split: reach figures count only views that actually landed on
+     * omrms.com, and the referrer panel counts only arrivals onto it. Views
+     * logged before the `host` column existed carry '' and belong to neither
+     * site, so they are in no figure below except `site_views`, the denominator
+     * of omrms's share of all recorded traffic.
+     *
+     * Content figures (articles, reads) stay database-wide: an article is the
+     * same article on both sites.
      */
-    private function omrmsStats(Carbon $since): array
+    private function omrmsTab(Request $request, string $sinceDate, Carbon $since, Carbon $prevFrom, Carbon $visitorTableSince): array
     {
-        $top = \App\Models\Post::query()
+        return [
+            'omrms' => [
+                'headline'    => Omrms::siteStats(),
+                'newArticles' => Post::where('type', 'article')->where('created_at', '>=', $since)->count(),
+                'today'       => $this->omrmsToday(),
+                'window'      => $this->omrmsWindow($sinceDate, $since, $prevFrom),
+                'topPages'    => $this->omrmsTopPages($sinceDate),
+                'top'         => $this->omrmsTopArticles(),
+            ],
+        ] + $this->referrersTab($request, $visitorTableSince, true);
+    }
+
+    /** Views and unique visitors on omrms.com across a day range. */
+    private function omrmsViews(string $from, string $to): object
+    {
+        return Omrms::onlyHost(DB::table('visitor_page_views'))
+            ->whereBetween('day', [$from, $to])
+            ->selectRaw('COALESCE(SUM(hits), 0) AS views, COUNT(DISTINCT visitor_token) AS uniques')
+            ->first();
+    }
+
+    /** Today's reach on omrms.com, against yesterday, plus who is on it right now. */
+    private function omrmsToday(): array
+    {
+        $today = now()->toDateString();
+        $prev  = $this->omrmsViews(now()->subDay()->toDateString(), now()->subDay()->toDateString());
+        $now   = $this->omrmsViews($today, $today);
+
+        return [
+            'views'         => (int) $now->views,
+            'uniques'       => (int) $now->uniques,
+            'views_trend'   => $this->movement((int) $now->views, (int) $prev->views),
+            'uniques_trend' => $this->movement((int) $now->uniques, (int) $prev->uniques),
+            'live'          => Omrms::onlyHost(Visitor::query())
+                ->where('updated_at', '>=', now()->subMinutes(self::LIVE_WINDOW_MINUTES))
+                ->count(),
+            'live_minutes'  => self::LIVE_WINDOW_MINUTES,
+        ];
+    }
+
+    /** The same reach over the selected window, and omrms's share of all traffic. */
+    private function omrmsWindow(string $sinceDate, Carbon $since, Carbon $prevFrom): array
+    {
+        $today   = now()->toDateString();
+        $current = $this->omrmsViews($sinceDate, $today);
+        $prior   = $this->omrmsViews($prevFrom->toDateString(), $since->copy()->subDay()->toDateString());
+
+        // Every view recorded in the window, on any host — omrms, tanbat, or the
+        // pre-host rows. The share is of recorded traffic, not of omrms + tanbat.
+        $siteViews = (int) DB::table('visitor_page_views')
+            ->whereBetween('day', [$sinceDate, $today])
+            ->sum('hits');
+
+        $views   = (int) $current->views;
+        $uniques = (int) $current->uniques;
+
+        return [
+            'views'             => $views,
+            'uniques'           => $uniques,
+            'views_trend'       => $this->movement($views, (int) $prior->views),
+            'uniques_trend'     => $this->movement($uniques, (int) $prior->uniques),
+            'views_per_visitor' => $uniques > 0 ? round($views / $uniques, 1) : 0.0,
+            'site_views'        => $siteViews,
+            'share'             => $siteViews > 0 ? round($views / $siteViews * 100, 1) : 0.0,
+        ];
+    }
+
+    /** The omrms.com URLs people actually reached in the window, busiest first. */
+    private function omrmsTopPages(string $sinceDate): array
+    {
+        return Omrms::onlyHost(DB::table('visitor_page_views'))
+            ->where('day', '>=', $sinceDate)
+            ->selectRaw('path, SUM(hits) AS views, COUNT(DISTINCT visitor_token) AS uniques')
+            ->groupBy('path')
+            ->orderByDesc('views')
+            ->limit(10)
+            ->get()
+            ->map(fn ($r) => [
+                'path'    => (string) $r->path,
+                'url'     => Omrms::CANONICAL_URL . $r->path,
+                'views'   => (int) $r->views,
+                'uniques' => (int) $r->uniques,
+            ])
+            ->all();
+    }
+
+    /**
+     * Most-read articles by their all-time `views_count`. This is engagement with
+     * the *content*, counted on both sites and over all time — not omrms reach in
+     * the window, which topPages() answers.
+     */
+    private function omrmsTopArticles(): array
+    {
+        return Post::query()
             ->where('type', 'article')->whereNotNull('slug')->where('slug', '!=', '')
             ->orderByDesc('views_count')
             ->limit(10)
-            ->get(['id', 'slug', 'title', 'views_count', 'is_legacy', 'legacy_post_id']);
-
-        return [
-            'headline'    => \App\Support\Omrms::siteStats(),
-            'newArticles' => \App\Models\Post::where('type', 'article')->where('created_at', '>=', $since)->count(),
-            'top'         => $top->map(fn ($p) => [
+            ->get(['id', 'slug', 'title', 'views_count', 'is_legacy', 'legacy_post_id'])
+            ->map(fn ($p) => [
                 'title' => (string) $p->title,
-                'url'   => \App\Support\Omrms::canonicalArticleUrl($p),
+                'url'   => Omrms::canonicalArticleUrl($p),
                 'views' => (int) $p->views_count,
-            ])->all(),
-        ];
+            ])
+            ->all();
     }
 
     /* ────────────────────────────── Helpers ─────────────────────────────── */

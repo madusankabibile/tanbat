@@ -150,6 +150,8 @@
   .drill__link--in { color: var(--pine-d); }
   .drill__link:hover { text-decoration: underline; }
   .drill__none { color: var(--ink-4); }
+  /* Which site that landing page was on — only shown where both can appear. */
+  .drill__on { display: block; margin-top: .125rem; font-size: .625rem; color: var(--ink-4); }
   .drill__when { white-space: nowrap; font-size: .6875rem; color: var(--ink-4); }
 
   /* Compact people / visitor rows. */

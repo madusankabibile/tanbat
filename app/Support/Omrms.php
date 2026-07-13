@@ -21,12 +21,39 @@ use Illuminate\Support\Str;
  */
 class Omrms
 {
+    /** The apex domain, as it is written in the visitor tables' `host` column. */
+    public const HOST = 'omrms.com';
+
     /** True when the current request is being served under the omrms.com domain. */
     public static function isActive(): bool
     {
-        $host = strtolower((string) request()->getHost());
+        return self::isHost(request()->getHost());
+    }
+
+    /** True for omrms.com and any subdomain of it (www., staging., …). */
+    public static function isHost(?string $host): bool
+    {
+        $host = strtolower(trim((string) $host));
 
         return $host === 'omrms.com' || str_ends_with($host, '.omrms.com');
+    }
+
+    /**
+     * Narrow a query on any table carrying a `host` column (visitors,
+     * visitor_page_views) to omrms.com traffic — the SQL twin of isHost().
+     * Rows recorded before the host column existed hold '' and match neither
+     * site, which is the honest answer for them.
+     *
+     * @template T of \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder
+     * @param  T  $query
+     * @return T
+     */
+    public static function onlyHost($query, string $column = 'host')
+    {
+        return $query->where(function ($w) use ($column) {
+            $w->where($column, '=', self::HOST)
+              ->orWhere($column, 'like', '%.' . self::HOST);
+        });
     }
 
     /** Canonical public origin for omrms.com (used off-host, e.g. in tanbat admin). */
