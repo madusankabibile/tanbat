@@ -94,6 +94,64 @@
   .barline__fill { height: 100%; border-radius: 3px; background: var(--pine); }
   .barline__fill--brass { background: var(--brass); }
 
+  /* A barline that opens its own detail (referrers). Still a link, still a
+     request — the drill-down is deep-linkable like every other view here. */
+  .barline--open { display: block; color: inherit; }
+  .barline--open:hover { background: #FAFBFB; }
+  .barline--open:hover .barline__name { color: var(--ink); }
+  .barline--open:focus-visible { outline: 2px solid var(--pine); outline-offset: 2px; border-radius: 4px; }
+  .barline__caret {
+    display: inline-block; width: .625rem; margin-right: .1875rem;
+    color: var(--ink-4); font-weight: 600;
+    transition: transform .12s ease;
+  }
+  .barline--open.is-open .barline__caret { transform: rotate(90deg); color: var(--brass); }
+  .barline--open.is-open .barline__name { color: var(--ink); font-weight: 600; }
+
+  /* ── Drill-down (referrer → exact links → landing pages) ─────────── */
+  .drill {
+    margin: .625rem 0 .125rem;
+    border: 1px solid var(--rule-soft); border-radius: 6px;
+    background: #FAFBFB; overflow: hidden;
+  }
+  .drill__head {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: .5rem .625rem; border-bottom: 1px solid var(--rule-soft);
+    font-size: .6875rem; color: var(--ink-3);
+  }
+  .drill__head .mono { font-family: var(--mono); color: var(--ink-2); }
+  .drill__close {
+    flex: 0 0 auto;
+    font-family: var(--mono); font-size: .5625rem; font-weight: 500;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+  }
+  .drill__close:hover { color: var(--ink); }
+  /* Full URLs are long; the table scrolls inside the panel rather than widening it. */
+  .drill__scroll { overflow-x: auto; }
+  .drill table { width: 100%; border-collapse: collapse; }
+  .drill th {
+    padding: .4375rem .625rem; text-align: left; white-space: nowrap;
+    font-family: var(--mono); font-size: .5625rem; font-weight: 500;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+    border-bottom: 1px solid var(--rule-soft); background: var(--surface);
+  }
+  .drill td {
+    padding: .5rem .625rem; border-top: 1px solid var(--rule-soft);
+    font-size: .75rem; color: var(--ink-2); vertical-align: top;
+  }
+  .drill tbody tr:first-child td { border-top: 0; }
+  .drill tbody tr:hover { background: var(--surface); }
+  .drill .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .drill__link {
+    display: inline-block; max-width: 24rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+    font-family: var(--mono); font-size: .75rem; color: var(--brass);
+  }
+  .drill__link--in { color: var(--pine-d); }
+  .drill__link:hover { text-decoration: underline; }
+  .drill__none { color: var(--ink-4); }
+  .drill__when { white-space: nowrap; font-size: .6875rem; color: var(--ink-4); }
+
   /* Compact people / visitor rows. */
   .row-item {
     display: flex; align-items: center; gap: .6875rem;

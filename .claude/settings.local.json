@@ -77,7 +77,11 @@
       "PowerShell(php artisan test 2>&1 | Select-Object -Last 8)",
       "PowerShell(php artisan test --filter=PublicSeoTest 2>&1 | Select-Object -Last 12)",
       "Bash(php -r 'require '\\\\''vendor/autoload.php'\\\\''; $app=require '\\\\''bootstrap/app.php'\\\\''; $app->make\\(Illuminate\\\\Contracts\\\\Console\\\\Kernel::class\\)->bootstrap\\(\\); echo '\\\\''APP_URL='\\\\''.config\\('\\\\''app.url'\\\\''\\).PHP_EOL; $p=trim\\(\\(string\\)parse_url\\(config\\('\\\\''app.url'\\\\''\\),PHP_URL_PATH\\),'\\\\''/'\\\\''\\); echo '\\\\''path=['\\\\''.$p.'\\\\''] -> forceRootUrl '\\\\''.\\($p!=='\\\\'''\\\\''?'\\\\''YES'\\\\'':'\\\\''NO'\\\\''\\).PHP_EOL;')",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "PowerShell(php artisan test --filter=StatisticsPageTest 2>&1 | Select-Object -Last 25)",
+      "PowerShell(php artisan tinker \"C:\\\\Users\\\\HP\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\H--xampp-htdocs-tanbat-xd-tanbat\\\\8bc45cc9-8bf1-4a5a-8498-bab51d8d1253\\\\scratchpad\\\\refs.php\")",
+      "PowerShell(php artisan test --filter=StatisticsPageTest 2>&1 | Select-Object -Last 12)",
+      "PowerShell(php artisan tinker \"C:\\\\Users\\\\HP\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\H--xampp-htdocs-tanbat-xd-tanbat\\\\8bc45cc9-8bf1-4a5a-8498-bab51d8d1253\\\\scratchpad\\\\drill.php\")"
     ]
   }
 }

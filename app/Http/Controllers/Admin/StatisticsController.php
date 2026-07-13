@@ -50,6 +50,11 @@ class StatisticsController extends Controller
 
     private const LOG_PER_PAGE = 15;
 
+    /** Referrer hosts ranked on the tab, and links shown when one is opened. */
+    private const REFERRER_HOSTS = 10;
+
+    private const REFERRER_LINKS = 30;
+
     /** A visitor last seen within this many minutes counts as "here now". */
     private const LIVE_WINDOW_MINUTES = 15;
 
@@ -102,7 +107,7 @@ class StatisticsController extends Controller
             ],
             'countries' => ['countries' => $this->countries($visitorTableSince, 20)],
             'map'       => ['mapCountries' => $this->countries($visitorTableSince, null)],
-            'referrers' => ['referrers' => $this->referrers($visitorTableSince)],
+            'referrers' => $this->referrersTab($request, $visitorTableSince),
             'devices'   => ['devices' => $this->deviceBreakdown($visitorTableSince)],
             'log'       => [
                 'visitorLog'     => $this->visitorLog($request, $days),
@@ -332,25 +337,74 @@ class StatisticsController extends Controller
     }
 
     /**
-     * External referrers only — RecordVisitor nulls out same-host referers, and
-     * a null referrer is a direct visit, so both are excluded here.
+     * The referrers tab: hosts ranked by visitors, plus the exact links behind
+     * the one host the reader has opened (`?ref=<host>`).
+     *
+     * The drill-down is honest because RecordVisitor writes `page` and
+     * `referrer` in the *same* request and nulls the referrer on same-host
+     * navigation: any row still carrying a referrer therefore holds a genuine
+     * pair — the exact link that was clicked, and the exact page it opened.
      */
-    private function referrers(Carbon $since): array
+    private function referrersTab(Request $request, Carbon $since): array
     {
-        $rows = Visitor::where('updated_at', '>=', $since)
+        $byHost = $this->referrerRows($since);
+
+        $ref  = (string) $request->query('ref', '');
+        $host = $byHost->has($ref) ? $ref : null;
+
+        return [
+            'referrers' => $byHost
+                ->map(fn ($rows, $h) => [
+                    'host'     => $h,
+                    'visitors' => $rows->count(),
+                    'hits'     => (int) $rows->sum('hits'),
+                ])
+                ->sortByDesc('visitors')
+                ->take(self::REFERRER_HOSTS)
+                ->values()
+                ->all(),
+            'refHost'  => $host,
+            'refLinks' => $host ? $this->referrerLinks($byHost->get($host)) : [],
+        ];
+    }
+
+    /**
+     * Every external-referrer visitor in the window, grouped by referring host.
+     * Both the ranked list and the drill-down read this one query — a null
+     * referrer is a direct visit, and a same-host one was already nulled on write.
+     *
+     * @return \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, Visitor>>
+     */
+    private function referrerRows(Carbon $since)
+    {
+        return Visitor::where('updated_at', '>=', $since)
             ->whereNotNull('referrer')
             ->where('referrer', '!=', '')
-            ->get(['referrer', 'hits']);
+            ->get(['referrer', 'page', 'hits', 'updated_at'])
+            ->groupBy(fn ($r) => parse_url($r->referrer, PHP_URL_HOST) ?: $r->referrer);
+    }
 
-        return collect($rows)
-            ->groupBy(fn ($r) => parse_url($r->referrer, PHP_URL_HOST) ?: $r->referrer)
-            ->map(fn ($group, $host) => [
-                'host'     => $host,
-                'visitors' => $group->count(),
-                'hits'     => (int) $group->sum('hits'),
+    /**
+     * One row per (referring link, page it opened) pair for a single host,
+     * busiest first. Visitors who clicked the same link onto the same page
+     * collapse into one row.
+     *
+     * @param  \Illuminate\Support\Collection<int, Visitor>  $rows
+     */
+    private function referrerLinks($rows): array
+    {
+        return $rows
+            // NUL can't appear in either column, so it can't collide two pairs.
+            ->groupBy(fn ($r) => $r->referrer . "\0" . ($r->page ?? ''))
+            ->map(fn ($group) => [
+                'url'       => (string) $group->first()->referrer,
+                'page'      => (string) ($group->first()->page ?? ''),
+                'visitors'  => $group->count(),
+                'hits'      => (int) $group->sum('hits'),
+                'last_seen' => $group->max('updated_at'),
             ])
             ->sortByDesc('visitors')
-            ->take(10)
+            ->take(self::REFERRER_LINKS)
             ->values()
             ->all();
     }

@@ -201,6 +201,61 @@ class StatisticsPageTest extends TestCase
         }
     }
 
+    /** Render the referrers partial directly: the live DB may hold no external referrer. */
+    private function renderReferrers(?string $refHost, array $refLinks = []): string
+    {
+        return view('admin.statistics.tabs._referrers', [
+            'referrers' => [
+                ['host' => 'www.google.com',       'visitors' => 4, 'hits' => 9],
+                ['host' => 'news.ycombinator.com', 'visitors' => 1, 'hits' => 2],
+            ],
+            'refHost'          => $refHost,
+            'refLinks'         => $refLinks,
+            'visitorTableDays' => 30,
+            'days'             => 30,
+        ])->render();
+    }
+
+    public function test_a_referrer_opens_the_exact_links_and_the_pages_they_landed_on(): void
+    {
+        // Closed: each host is a link that opens itself, and nothing is drilled into.
+        $closed = $this->renderReferrers(null);
+        $this->assertStringContainsString('ref=www.google.com', $closed);
+        $this->assertStringContainsString('ref=news.ycombinator.com', $closed);
+        $this->assertStringNotContainsString('class="drill"', $closed);
+
+        $open = $this->renderReferrers('www.google.com', [[
+            'url'       => 'https://www.google.com/search?q=tanbat',
+            'page'      => '/books',
+            'visitors'  => 3,
+            'hits'      => 7,
+            'last_seen' => now()->subHour(),
+        ]]);
+
+        // The whole point of the drill-down: the exact link clicked, and the exact
+        // page it opened, both reachable.
+        $this->assertStringContainsString('href="https://www.google.com/search?q=tanbat"', $open);
+        $this->assertStringContainsString('href="' . url('/books') . '"', $open);
+        $this->assertStringContainsString('aria-expanded="true"', $open);
+
+        // Opening one host must not drag the other open, and the window survives.
+        $this->assertSame(1, substr_count($open, 'aria-expanded="true"'));
+        $this->assertStringContainsString('tab=referrers', $open);
+        $this->assertStringContainsString('days=30', $open);
+    }
+
+    public function test_an_unknown_referrer_host_opens_nothing(): void
+    {
+        // `ref` is only honoured when it matches a host actually in the window, so
+        // an invented one can neither drill nor be echoed back into the page.
+        $html = $this->actingAs($this->admin())
+            ->get('/admin/statistics?tab=referrers&ref=not-a-real-referrer.example')
+            ->getContent();
+
+        $this->assertStringNotContainsString('class="drill"', $html);
+        $this->assertStringNotContainsString('not-a-real-referrer.example', $html);
+    }
+
     /** Render the map partial directly: the live DB may hold no geolocated visitor. */
     private function renderMap(array $mapCountries): string
     {
