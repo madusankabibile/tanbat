@@ -92,21 +92,16 @@ return [
     // for a few days rather than re-seeing everything after just half a day.
     'guest_impression_ttl_hours' => 72,
 
-    // Guest feed shuffle. The anonymous feed is ordered by an engagement "heat"
-    // (blended with local-popularity) score, but a purely deterministic ORDER BY
-    // leads every fresh guest visit — and every visit after the impression
-    // memory above expires — with the exact same top posts in the exact same
-    // order. We multiply each post's ordering score by a random factor
-    // (1 ± guest_shuffle_spread) so posts re-shuffle on every request. Because
-    // it's multiplicative, the shuffle scales with the score, so it reshuffles
-    // both the flat mid-band and the high-scoring locally-popular articles
-    // (whose scores are otherwise far too large for an additive jitter to move).
-    // This is the guest-side analogue of the member feed's stochastic first pick
-    // (first_pick_* below). Range 0–1: 0 restores the old deterministic order,
-    // higher = more variety / weaker "most popular first". At 0.8 the factor
-    // spans [0.2, 1.8], enough that the opening genuinely rotates while good
-    // content still tends to lead.
-    'guest_shuffle_spread' => 0.8,
+    // Guest feed recency shuffle window (hours). The anonymous feed is ordered
+    // newest-first (article-led — see FeedRanker::anonymousFeed), but a purely
+    // deterministic ORDER BY would open every fresh guest visit with the exact
+    // same posts in the exact same order. We add a random jitter of up to this
+    // many hours to each post's recency key, so posts created within the window
+    // of each other re-shuffle between requests. Keep it well below the gap
+    // between your recent and legacy content (months/years) so a legacy article
+    // can never leapfrog a recent one — it only varies the order of same-era
+    // posts. 0 disables the shuffle (strict newest-first).
+    'guest_recency_shuffle_hours' => 48,
 
     // Demographic scoring (small contributions — never the dominant signal).
     'demographic' => [

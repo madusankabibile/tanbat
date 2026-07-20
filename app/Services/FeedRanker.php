@@ -121,17 +121,19 @@ class FeedRanker
      */
     private function anonymousFeed(int $limit, array $excludeIds = [], ?string $viewerCountry = null, ?string $guestKey = null): array
     {
-        // Heat, dampened for automated/system accounts so genuine members lead
-        // even the guest feed.
-        $botIds  = $this->botUserIds();
-        $botMult = (float) config('feed.bot_multiplier');
-        $heat    = '(likes_count * 1.0 + comments_count * 1.5 + LOG(GREATEST(views_count, 1)) * 0.3)';
-        $bindings = [];
-        if (!empty($botIds)) {
-            $ph    = implode(',', array_fill(0, count($botIds), '?'));
-            $heat  = "($heat) * (CASE WHEN posts.user_id IN ($ph) THEN ? ELSE 1 END)";
-            $bindings = array_merge($botIds, [$botMult]);
-        }
+        // Guest feed ordering (recency-led, article-first). Tiers, applied in
+        // order so the feed opens with recent long-form content:
+        //   1. Articles rank above every other post type — the guest feed is
+        //      article-led, so status/image/video sink beneath the articles.
+        //   2. Within a type, genuine members rank above the automated bot
+        //      accounts, so the daily bot status/image/video posts don't lead
+        //      the feed just for being the newest thing on the site.
+        //   3. Newest first — so recent articles sit at the top and the old
+        //      legacy (imported blog) articles fall below them.
+        // A bounded random jitter on the recency key reshuffles items of a
+        // similar age between requests (variety), while the IP-keyed rotation
+        // below keeps surfacing new content across refreshes.
+        $botIds = $this->botUserIds();
 
         // Posts this guest IP has already been shown recently — excluded so the
         // feed rotates across refreshes. Empty when there's no guest key.
@@ -151,59 +153,33 @@ class FeedRanker
             }
         }
 
-        // Multiplicative random factor applied to the ordering score so posts
-        // re-shuffle between requests (see config/feed.php guest_shuffle_spread).
-        // Without it the ordering is deterministic and every fresh guest visit
-        // opens with the same top posts in the same order. `1 + (RAND()*2-1)*s`
-        // gives a factor centred on 1 spanning [1-s, 1+s].
-        $spread = max(0.0, min(1.0, (float) config('feed.guest_shuffle_spread', 0)));
+        // Recency shuffle window (seconds): two posts whose created_at is within
+        // this window of each other may swap order for variety. Kept far smaller
+        // than the gap between recent and legacy content, so a legacy article can
+        // never jump ahead of a recent one — it only reshuffles same-era posts.
+        $jitter = max(0, (int) config('feed.guest_recency_shuffle_hours', 48)) * 3600;
 
         // Query factory — lets us re-run without the seen filter to recycle.
-        $build = function (array $skipIds) use ($heat, $bindings, $viewerCountry, $limit, $spread) {
+        $build = function (array $skipIds) use ($botIds, $jitter, $limit) {
             // Book posts are members-only — never expose them to anonymous viewers.
             $q = Post::with(['user:id,name,username,profile_picture', 'category', 'media', 'tags'])
                 ->select('posts.*')
-                ->selectRaw("$heat AS heat", $bindings)
                 ->where('is_adult', false)
                 ->where('type', '!=', 'book');
             if (!empty($skipIds)) $q->whereNotIn('id', $skipIds);
 
-            // Prefer posts from the viewer's own country (resolved from their IP),
-            // and content that readers in the viewer's country open the most.
-            if ($viewerCountry) {
-                // NULL-safety matters here: both subqueries feed the ORDER BY
-                // expression below, and in SQL `x + NULL = NULL`. If EITHER piece
-                // came back NULL the whole ordering score collapsed to NULL for
-                // that row — and since most posts have no article_country_views
-                // row (and some authors have no country), that meant nearly every
-                // row tied at NULL and the feed silently degraded to a pure
-                // created_at DESC list (heat and the shuffle below both ignored).
-                // Wrap each subquery so it always yields a number: COALESCE the
-                // author country to '' before comparing, and COALESCE a missing
-                // views row to 0 (COALESCE inside the subquery doesn't help — a
-                // zero-row subquery is itself NULL, so the COALESCE must be
-                // OUTSIDE it).
-                $q->selectRaw(
-                    '(COALESCE((SELECT au.country FROM users au WHERE au.id = posts.user_id), \'\') = ?) AS same_country',
-                    [$viewerCountry]
-                );
-                $q->selectRaw(
-                    'COALESCE((SELECT acv.views FROM article_country_views acv
-                        WHERE acv.post_id = posts.id AND acv.country_code = ?), 0) AS country_views',
-                    [$viewerCountry]
-                );
-                // Blend the country-reading signal INTO the heat score instead of
-                // sorting on it first. Sorting on country_views first pinned every
-                // article with any local views above all image/video/status posts,
-                // so guests only ever saw articles. LOG() dampens runaway article
-                // view counts so a couple of viral articles don't monopolise the
-                // feed, while same-country authorship still gets a nudge.
-                $q->orderByRaw('((heat + LOG(country_views + 1) * 2.0 + same_country * 1.5) * (1 + (RAND() * 2 - 1) * ?)) DESC', [$spread])
-                  ->orderByDesc('created_at');
-            } else {
-                $q->orderByRaw('(heat * (1 + (RAND() * 2 - 1) * ?)) DESC', [$spread])
-                  ->orderByDesc('created_at');
+            // Tier 1: articles above everything else. Single-quoted SQL literal
+            // so it's safe under MySQL's ANSI_QUOTES mode (some managed hosts).
+            $q->orderByRaw("(posts.type = 'article') DESC");
+
+            // Tier 2: genuine members above automated bot accounts.
+            if (!empty($botIds)) {
+                $ph = implode(',', array_fill(0, count($botIds), '?'));
+                $q->orderByRaw("(posts.user_id NOT IN ($ph)) DESC", $botIds);
             }
+
+            // Tier 3: newest first, with the bounded jitter for cross-request variety.
+            $q->orderByRaw('(UNIX_TIMESTAMP(posts.created_at) + RAND() * ?) DESC', [$jitter]);
 
             return $q->take($limit)->get();
         };
