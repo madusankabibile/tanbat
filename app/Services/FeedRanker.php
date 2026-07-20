@@ -151,8 +151,15 @@ class FeedRanker
             }
         }
 
+        // Multiplicative random factor applied to the ordering score so posts
+        // re-shuffle between requests (see config/feed.php guest_shuffle_spread).
+        // Without it the ordering is deterministic and every fresh guest visit
+        // opens with the same top posts in the same order. `1 + (RAND()*2-1)*s`
+        // gives a factor centred on 1 spanning [1-s, 1+s].
+        $spread = max(0.0, min(1.0, (float) config('feed.guest_shuffle_spread', 0)));
+
         // Query factory — lets us re-run without the seen filter to recycle.
-        $build = function (array $skipIds) use ($heat, $bindings, $viewerCountry, $limit) {
+        $build = function (array $skipIds) use ($heat, $bindings, $viewerCountry, $limit, $spread) {
             // Book posts are members-only — never expose them to anonymous viewers.
             $q = Post::with(['user:id,name,username,profile_picture', 'category', 'media', 'tags'])
                 ->select('posts.*')
@@ -164,13 +171,25 @@ class FeedRanker
             // Prefer posts from the viewer's own country (resolved from their IP),
             // and content that readers in the viewer's country open the most.
             if ($viewerCountry) {
+                // NULL-safety matters here: both subqueries feed the ORDER BY
+                // expression below, and in SQL `x + NULL = NULL`. If EITHER piece
+                // came back NULL the whole ordering score collapsed to NULL for
+                // that row — and since most posts have no article_country_views
+                // row (and some authors have no country), that meant nearly every
+                // row tied at NULL and the feed silently degraded to a pure
+                // created_at DESC list (heat and the shuffle below both ignored).
+                // Wrap each subquery so it always yields a number: COALESCE the
+                // author country to '' before comparing, and COALESCE a missing
+                // views row to 0 (COALESCE inside the subquery doesn't help — a
+                // zero-row subquery is itself NULL, so the COALESCE must be
+                // OUTSIDE it).
                 $q->selectRaw(
-                    '(SELECT au.country FROM users au WHERE au.id = posts.user_id) = ? AS same_country',
+                    '(COALESCE((SELECT au.country FROM users au WHERE au.id = posts.user_id), \'\') = ?) AS same_country',
                     [$viewerCountry]
                 );
                 $q->selectRaw(
-                    '(SELECT COALESCE(acv.views, 0) FROM article_country_views acv
-                        WHERE acv.post_id = posts.id AND acv.country_code = ?) AS country_views',
+                    'COALESCE((SELECT acv.views FROM article_country_views acv
+                        WHERE acv.post_id = posts.id AND acv.country_code = ?), 0) AS country_views',
                     [$viewerCountry]
                 );
                 // Blend the country-reading signal INTO the heat score instead of
@@ -179,10 +198,10 @@ class FeedRanker
                 // so guests only ever saw articles. LOG() dampens runaway article
                 // view counts so a couple of viral articles don't monopolise the
                 // feed, while same-country authorship still gets a nudge.
-                $q->orderByRaw('(heat + LOG(country_views + 1) * 2.0 + same_country * 1.5) DESC')
+                $q->orderByRaw('((heat + LOG(country_views + 1) * 2.0 + same_country * 1.5) * (1 + (RAND() * 2 - 1) * ?)) DESC', [$spread])
                   ->orderByDesc('created_at');
             } else {
-                $q->orderByDesc('heat')
+                $q->orderByRaw('(heat * (1 + (RAND() * 2 - 1) * ?)) DESC', [$spread])
                   ->orderByDesc('created_at');
             }
 

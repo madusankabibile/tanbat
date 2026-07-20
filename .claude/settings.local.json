@@ -86,7 +86,13 @@
       "PowerShell(php artisan test --filter=StatisticsPageTest 2>&1 | Select-Object -Last 30)",
       "PowerShell(php artisan tinker \"C:\\\\Users\\\\HP\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\H--xampp-htdocs-tanbat-xd-tanbat\\\\8bc45cc9-8bf1-4a5a-8498-bab51d8d1253\\\\scratchpad\\\\omrms.php\")",
       "PowerShell(php artisan tinker \"C:\\\\Users\\\\HP\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\H--xampp-htdocs-tanbat-xd-tanbat\\\\8bc45cc9-8bf1-4a5a-8498-bab51d8d1253\\\\tab.php\")",
-      "PowerShell(php artisan tinker \"C:\\\\Users\\\\HP\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\H--xampp-htdocs-tanbat-xd-tanbat\\\\8bc45cc9-8bf1-4a5a-8498-bab51d8d1253\\\\scratchpad\\\\schema.php\")"
+      "PowerShell(php artisan tinker \"C:\\\\Users\\\\HP\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\H--xampp-htdocs-tanbat-xd-tanbat\\\\8bc45cc9-8bf1-4a5a-8498-bab51d8d1253\\\\scratchpad\\\\schema.php\")",
+      "Bash(sed -i 's/whereIn\\(.id./whereIn\\(\"posts.id\"/' /tmp/dbg.php)",
+      "Bash(php /tmp/dbg.php)",
+      "Bash(php /tmp/verify2.php)",
+      "Bash(php /tmp/req.php)",
+      "Bash(php -l config/feed.php)",
+      "Bash(rm -f /tmp/probe.php /tmp/sim.php /tmp/req.php /tmp/verify.php /tmp/verify2.php /tmp/heat.php /tmp/dbg.php /tmp/dbg2.php /tmp/dbg3.php)"
     ]
   }
 }
