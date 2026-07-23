@@ -77,8 +77,8 @@
               </div>
             </div>
           </td>
-          <td><span class="badge badge-type">{{ $ad->placement }}</span></td>
-          <td>
+          <td data-label="Placement"><span class="badge badge-type">{{ $ad->placement }}</span></td>
+          <td data-label="Status">
             @if($isExpired)
               <span class="badge badge-expired">expired</span>
             @elseif($isLive)
@@ -89,18 +89,18 @@
               <span class="badge badge-off">paused</span>
             @endif
           </td>
-          <td class="text-right font-semibold">{{ $ad->weight }}</td>
-          <td class="text-right font-semibold">{{ number_format($ad->impressions) }}</td>
-          <td class="text-right font-semibold">{{ number_format($ad->clicks) }}</td>
-          <td class="text-right font-semibold">{{ $ad->ctr }}%</td>
-          <td class="text-xs text-slate-500">
+          <td class="text-right font-semibold" data-label="Weight">{{ $ad->weight }}</td>
+          <td class="text-right font-semibold" data-label="Impressions">{{ number_format($ad->impressions) }}</td>
+          <td class="text-right font-semibold" data-label="Clicks">{{ number_format($ad->clicks) }}</td>
+          <td class="text-right font-semibold" data-label="CTR">{{ $ad->ctr }}%</td>
+          <td class="text-xs text-slate-500" data-label="Schedule">
             @if($ad->starts_at || $ad->ends_at)
               {{ $ad->starts_at?->format('M j') ?? '—' }} → {{ $ad->ends_at?->format('M j, Y') ?? '∞' }}
             @else
               always
             @endif
           </td>
-          <td class="text-right">
+          <td class="text-right cell-actions">
             <div class="inline-flex gap-1.5">
               <form method="POST" action="{{ route('admin.ads.toggle', $ad) }}">
                 @csrf

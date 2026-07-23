@@ -72,22 +72,22 @@
           @php $ua = \App\Services\UserAgentParser::parse($v->user_agent); @endphp
           <tr>
             <td class="cell-mono">{{ $v->ip_address ?? '—' }}</td>
-            <td>
+            <td data-label="Country">
               <span class="country-cell">
                 @include('admin.partials._flag', ['code' => $v->country_code, 'label' => $v->country_name ?: 'Unknown'])
                 <span class="text-slate-600">{{ $v->country_name ?: 'Unknown' }}</span>
                 @if($v->country_code)<span class="flag">{{ $v->country_code }}</span>@endif
               </span>
             </td>
-            <td><span class="cell-path" title="{{ $v->page }}">{{ $v->page ?: '—' }}</span></td>
-            <td>
+            <td data-label="Last page"><span class="cell-path" title="{{ $v->page }}">{{ $v->page ?: '—' }}</span></td>
+            <td data-label="Referrer">
               @if($v->referrer)
                 <span class="cell-path" title="{{ $v->referrer }}">{{ parse_url($v->referrer, PHP_URL_HOST) ?: $v->referrer }}</span>
               @else
                 <span class="text-slate-400 text-xs">Direct</span>
               @endif
             </td>
-            <td>
+            <td data-label="Client">
               @if($ua['is_bot'])
                 <span class="badge badge-user">bot</span>
               @else
@@ -97,9 +97,9 @@
                 {{ $ua['is_bot'] ? Str::limit($v->user_agent, 40) : $ua['browser'] . ' · ' . $ua['platform'] }}
               </span>
             </td>
-            <td class="text-right font-semibold">{{ number_format($v->hits) }}</td>
-            <td class="text-slate-500 text-xs">{{ $v->created_at?->format('M j, H:i') }}</td>
-            <td class="text-slate-500 text-xs">{{ $v->updated_at?->diffForHumans() }}</td>
+            <td class="text-right font-semibold" data-label="Hits">{{ number_format($v->hits) }}</td>
+            <td class="text-slate-500 text-xs" data-label="First seen">{{ $v->created_at?->format('M j, H:i') }}</td>
+            <td class="text-slate-500 text-xs" data-label="Last seen">{{ $v->updated_at?->diffForHumans() }}</td>
           </tr>
         @empty
           <tr><td colspan="8" class="py-8 text-center text-sm text-slate-500">No visitors match these filters.</td></tr>

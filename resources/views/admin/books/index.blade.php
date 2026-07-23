@@ -102,8 +102,8 @@
               </div>
             </div>
           </td>
-          <td class="text-slate-600">{{ $b->author ?: '—' }}</td>
-          <td>
+          <td class="text-slate-600" data-label="Author">{{ $b->author ?: '—' }}</td>
+          <td data-label="Requested by">
             @if($b->post?->user)
               <div class="text-sm font-semibold text-slate-800">{{ $b->post->user->name }}</div>
               <div class="text-[11px] text-slate-500">{{ '@'.$b->post->user->username }}</div>
@@ -111,11 +111,11 @@
               <span class="text-slate-400">—</span>
             @endif
           </td>
-          <td>
+          <td data-label="Format">
             <span class="badge badge-type">{{ strtoupper($b->extension ?: '?') }}</span>
             @if($b->size)<div class="mt-0.5 text-[11px] text-slate-500">{{ $b->size }}</div>@endif
           </td>
-          <td>
+          <td data-label="Reddit">
             @if($b->reddit_post_id)
               <a href="https://www.reddit.com/comments/{{ \Illuminate\Support\Str::after($b->reddit_post_id, 't3_') }}" target="_blank" class="badge badge-on hover:underline">Posted</a>
               <div class="mt-0.5 text-[11px] text-slate-500">{{ $b->reddit_posted_at?->diffForHumans() }}</div>
@@ -127,8 +127,8 @@
               <span class="badge badge-off">Pending</span>
             @endif
           </td>
-          <td class="text-xs text-slate-500">{{ $b->created_at?->format('M j, Y') }}</td>
-          <td class="text-right">
+          <td class="text-xs text-slate-500" data-label="Added">{{ $b->created_at?->format('M j, Y') }}</td>
+          <td class="text-right cell-actions">
             @php
               $noCover    = empty($b->cover_url);
               $redditOff  = !$redditReady || $noCover;

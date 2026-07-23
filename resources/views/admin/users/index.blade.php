@@ -62,12 +62,12 @@
               </div>
             </div>
           </td>
-          <td class="text-slate-600">{{ $user->email }}</td>
-          <td><span class="badge {{ $user->role === 'admin' ? 'badge-admin' : 'badge-user' }}">{{ $user->role }}</span></td>
-          <td class="text-right font-semibold">{{ $user->posts_count }}</td>
-          <td class="text-right font-semibold">{{ $user->comments_count }}</td>
-          <td class="text-slate-500 text-xs">{{ $user->created_at?->format('M j, Y') }}</td>
-          <td class="text-right">
+          <td class="text-slate-600" data-label="Email">{{ $user->email }}</td>
+          <td data-label="Role"><span class="badge {{ $user->role === 'admin' ? 'badge-admin' : 'badge-user' }}">{{ $user->role }}</span></td>
+          <td class="text-right font-semibold" data-label="Posts">{{ $user->posts_count }}</td>
+          <td class="text-right font-semibold" data-label="Comments">{{ $user->comments_count }}</td>
+          <td class="text-slate-500 text-xs" data-label="Joined">{{ $user->created_at?->format('M j, Y') }}</td>
+          <td class="text-right cell-actions">
             <div class="inline-flex gap-2">
               <a href="{{ url('/'.$user->username) }}" class="btn-xs" target="_blank">View</a>
               <a href="{{ route('admin.users.edit', $user) }}" class="btn-xs">Edit</a>

@@ -69,7 +69,7 @@
               <div class="text-xs text-slate-500 truncate">{{ $p->slug }}</div>
             @endif
           </td>
-          <td>
+          <td data-label="Author">
             <div class="flex items-center gap-2">
               @if($p->user?->profile_picture)
                 <img class="avatar-circle" style="width:28px;height:28px;font-size:.7rem" src="{{ asset('storage/'.$p->user->profile_picture) }}" alt="">
@@ -82,13 +82,13 @@
               </div>
             </div>
           </td>
-          <td class="text-slate-600">{{ $p->category?->name ?? '—' }}</td>
-          <td><span class="badge badge-type">{{ $p->type }}</span></td>
-          <td class="text-right font-semibold">{{ $p->likes_count }}</td>
-          <td class="text-right font-semibold">{{ $p->comments_count }}</td>
-          <td class="text-right font-semibold">{{ $p->views_count }}</td>
-          <td class="text-xs text-slate-500">{{ $p->created_at?->format('M j, Y') }}</td>
-          <td class="text-right">
+          <td class="text-slate-600" data-label="Category">{{ $p->category?->name ?? '—' }}</td>
+          <td data-label="Type"><span class="badge badge-type">{{ $p->type }}</span></td>
+          <td class="text-right font-semibold" data-label="Likes">{{ $p->likes_count }}</td>
+          <td class="text-right font-semibold" data-label="Comments">{{ $p->comments_count }}</td>
+          <td class="text-right font-semibold" data-label="Views">{{ $p->views_count }}</td>
+          <td class="text-xs text-slate-500" data-label="Created">{{ $p->created_at?->format('M j, Y') }}</td>
+          <td class="text-right cell-actions">
             <div class="inline-flex gap-1.5">
               <a href="{{ route('admin.posts.show', $p) }}" class="btn-xs">View</a>
               <a href="{{ route('admin.posts.edit', $p) }}" class="btn-xs">Edit</a>

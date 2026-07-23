@@ -3,6 +3,29 @@
 @section('breadcrumb', 'Manage')
 @section('heading', 'Categories')
 
+@push('head')
+<style>
+  /* On phones the four-column editor can't keep two text inputs side by side,
+     so each row restacks into a labelled card (mirrors the .table-card pattern
+     in the layout, but this table has its own markup and editable cells). */
+  @media (max-width: 639px) {
+    .cat-table table, .cat-table thead, .cat-table tbody,
+    .cat-table tr, .cat-table td { display: block; width: auto; }
+    .cat-table thead { display: none; }
+    .cat-table tr { padding: .625rem 1rem; }
+    .cat-table tr + tr { border-top: 1px solid var(--rule-soft); }
+    .cat-table td { padding: .375rem 0 !important; text-align: left !important; }
+    .cat-table td::before {
+      content: attr(data-label); display: block; margin-bottom: .25rem;
+      font-family: var(--mono); font-size: .625rem; font-weight: 500;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+    }
+    .cat-table td[data-label="Actions"] .inline-flex { width: 100%; }
+    .cat-table td[data-label="Actions"] .inline-flex .btn-xs { flex: 1 1 auto; }
+  }
+</style>
+@endpush
+
 @section('content')
 
 <div class="grid gap-5 lg:grid-cols-3">
@@ -25,7 +48,7 @@
       </form>
     @endforeach
 
-    <div class="overflow-hidden rounded-xl border border-slate-200">
+    <div class="cat-table overflow-hidden rounded-xl border border-slate-200">
       <table class="w-full">
         <thead class="bg-slate-50">
           <tr>
@@ -38,14 +61,14 @@
         <tbody>
           @forelse($categories as $cat)
             <tr class="border-t border-slate-100">
-              <td class="px-4 py-2.5">
+              <td class="px-4 py-2.5" data-label="Name">
                 <input form="cat-edit-{{ $cat->id }}" name="name" value="{{ $cat->name }}" class="input" required>
               </td>
-              <td class="px-4 py-2.5">
+              <td class="px-4 py-2.5" data-label="Slug">
                 <input form="cat-edit-{{ $cat->id }}" name="slug" value="{{ $cat->slug }}" class="input" placeholder="(auto)">
               </td>
-              <td class="px-4 py-2.5 text-right text-sm font-semibold text-slate-700">{{ $cat->posts_count }}</td>
-              <td class="px-4 py-2.5 text-right">
+              <td class="px-4 py-2.5 text-right text-sm font-semibold text-slate-700" data-label="Posts">{{ $cat->posts_count }}</td>
+              <td class="px-4 py-2.5 text-right" data-label="Actions">
                 <div class="inline-flex gap-1.5">
                   <button form="cat-edit-{{ $cat->id }}" type="submit" class="btn-xs btn-xs-primary">Save</button>
                   <button form="cat-del-{{ $cat->id }}"  type="submit" class="btn-xs btn-xs-danger">Delete</button>

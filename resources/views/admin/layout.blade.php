@@ -319,7 +319,11 @@
 
   /* ── Tables ──────────────────────────────────────────── */
   .table-card {
-    overflow: hidden; border-radius: var(--r); background: var(--surface);
+    /* Scrolls sideways rather than clipping when a wide table can't fit its
+       container (e.g. 9-column tables on a tablet). Below 768px the table
+       restacks into cards instead — see the responsive block further down. */
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    border-radius: var(--r); background: var(--surface);
     border: 1px solid var(--rule); box-shadow: none;
   }
   .table-card table { width: 100%; border-collapse: separate; border-spacing: 0; }
@@ -340,6 +344,67 @@
   .table-card th:last-child,  .table-card td:last-child  { padding-right: 1.25rem; }
   .table-card th.text-right, .table-card td.text-right { text-align: right; }
   .table-card td .inline-flex { white-space: nowrap; }
+
+  /* ── Responsive tables: restack into labelled cards on phones ──────
+     Below 768px a row can't stay a row without either clipping or a
+     cramped sideways scroll, so each <tr> becomes a self-contained card.
+     The column head is dropped in beside every value from the cell's
+     `data-label`, so nothing is hidden and the row actions stay reachable.
+     The first cell of a row is the card's identity block (avatar + name,
+     post title, IP…) — it carries no data-label and sits full width at the
+     top. The actions cell is tagged `.cell-actions` and forms the footer. */
+  @media (max-width: 767px) {
+    .table-card {
+      overflow: visible; border: 0; background: transparent; border-radius: 0;
+    }
+    .table-card table,
+    .table-card tbody,
+    .table-card tr,
+    .table-card td { display: block; width: auto; }
+    /* Column heads are folded into each cell's label, so hide the real
+       <thead> — but keep it in the accessibility tree (visually-hidden). */
+    .table-card thead {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    .table-card tbody tr {
+      background: var(--surface);
+      border: 1px solid var(--rule); border-radius: var(--r);
+      padding: .375rem 1rem; margin-bottom: .75rem;
+    }
+    .table-card tbody tr:hover td { background: transparent; }
+    .table-card td {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; max-width: none; text-align: right; white-space: normal;
+      padding: .5625rem 0 !important;
+      border-top: 1px solid var(--rule-soft) !important;
+    }
+    .table-card td::before {
+      content: attr(data-label); flex: 0 0 auto;
+      font-family: var(--mono); font-size: .625rem; font-weight: 500;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+      text-align: left;
+    }
+    /* Identity cell: no label, left-aligned, opens the card. */
+    .table-card td:first-child {
+      border-top: 0 !important;
+      padding-top: .625rem !important; padding-bottom: .625rem !important;
+      text-align: left;
+    }
+    .table-card td:first-child::before { display: none; }
+    /* Actions cell: a full-width footer; controls flow left-to-right, wrapping. */
+    .table-card td.cell-actions { padding-top: .625rem !important; }
+    .table-card td.cell-actions::before { display: none; }
+    .table-card td.cell-actions > .inline-flex { flex-wrap: wrap; }
+  }
+
+  /* ── Filter bars stack on phones ──────────────────────
+     The GET filter forms are `flex flex-wrap`; under 640px every field
+     (and its select/input) takes the full width so nothing is squeezed. */
+  @media (max-width: 639px) {
+    .admin-shell form.flex.flex-wrap > div { flex: 1 1 100%; min-width: 0; }
+    .admin-shell form.flex.flex-wrap .input { width: 100%; }
+  }
 
   /* ── Forms (re-skins the shared .input / .label) ────── */
   .admin-shell .label {
