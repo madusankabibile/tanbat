@@ -35,6 +35,17 @@ class PageController extends Controller
         return view('privacy');
     }
 
+    /**
+     * Privacy policy for the TubePlay Android app — a WebView video player that
+     * collects nothing. Hosted here because app stores require a public policy
+     * URL. Standalone page: it deliberately does NOT extend layouts.app, so
+     * there are no ads, analytics, cookies, or SPA scripts on it.
+     */
+    public function tubeplayPrivacy()
+    {
+        return view('tubeplay.privacy');
+    }
+
     /** Article create page */
     public function articleCreate()
     {

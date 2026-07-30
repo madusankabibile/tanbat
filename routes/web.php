@@ -54,6 +54,10 @@ Route::get('/how-to-publish',    [\App\Http\Controllers\OmrmsController::class, 
 // links; serves the same feed as /.
 Route::get('/home',              [PageController::class, 'home'])->name('home.feed');
 Route::get('/privacy',           [PageController::class, 'privacy'])->name('privacy');
+// Privacy policy for the TubePlay app (store listing requirement). Two segments,
+// but "tubeplay/privacy" also matches the legacy /{username}/{section} route at
+// the bottom of this file, so it MUST stay registered up here.
+Route::get('/tubeplay/privacy',  [PageController::class, 'tubeplayPrivacy'])->name('tubeplay.privacy');
 Route::get('/articles/feed.xml', [ArticleFeedController::class, 'rss'])->name('articles.feed');
 Route::get('/articles/create',   [PageController::class, 'articleCreate'])->name('articles.create');
 Route::get('/articles/{slug}',   [PageController::class, 'articleShow'])->name('articles.show');

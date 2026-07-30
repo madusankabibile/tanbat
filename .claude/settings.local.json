@@ -95,7 +95,9 @@
       "Bash(rm -f /tmp/probe.php /tmp/sim.php /tmp/req.php /tmp/verify.php /tmp/verify2.php /tmp/heat.php /tmp/dbg.php /tmp/dbg2.php /tmp/dbg3.php)",
       "Bash(cat)",
       "Bash(php /tmp/req2.php)",
-      "Bash(rm -f /tmp/leg.php /tmp/new.php /tmp/verify3.php /tmp/req2.php)"
+      "Bash(rm -f /tmp/leg.php /tmp/new.php /tmp/verify3.php /tmp/req2.php)",
+      "Bash(sed -i 's/\\\\$app }}/\\\\$appName }}/g; s/\\\\$app = '\\\\''TubePlay'\\\\''/\\\\$appName = '\\\\''TubePlay'\\\\''/' resources/views/tubeplay/privacy.blade.php)",
+      "Bash(grep -n '\\\\$app\\\\b' resources/views/tubeplay/privacy.blade.php)"
     ]
   }
 }
