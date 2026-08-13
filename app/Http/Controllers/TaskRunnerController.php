@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\BookDetail;
+use App\Services\BookRssImporter;
 use App\Services\PinterestPoster;
 use App\Services\RedditPoster;
+use App\Services\TelegramPoster;
+use App\Support\BookRssSettings;
+use App\Support\TelegramSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -75,6 +79,23 @@ class TaskRunnerController extends Controller
             $this->crossPostOneBookToPinterest();
         } catch (\Throwable $e) {
             // Never let Pinterest failures break the heartbeat.
+        }
+
+        // Poll the book RSS feed on its own (much slower) interval. Runs
+        // BEFORE the Telegram announcer so a book imported on this tick can be
+        // announced on the next one.
+        try {
+            $this->importBooksFromRss();
+        } catch (\Throwable $e) {
+            // Never let a bad feed break the heartbeat.
+        }
+
+        // Announce one book in the Telegram channel, same one-per-tick shape
+        // as the other two cross-posters but on its own spacing key.
+        try {
+            $this->crossPostOneBookToTelegram();
+        } catch (\Throwable $e) {
+            // Never let Telegram failures break the heartbeat.
         }
 
         foreach ($this->jobs as $key => $cfg) {
@@ -204,6 +225,91 @@ class TaskRunnerController extends Controller
             Log::warning('Pinterest cross-post failed', [
                 'book_id'  => $book->id,
                 'attempts' => $book->pinterest_attempts,
+                'error'    => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Poll the configured book RSS feed and publish anything new.
+     *
+     * Runs far less often than the cross-posters (default hourly) — the feed
+     * only changes a few times a day and each new item costs a cover download.
+     * The interval key ticks forward BEFORE the fetch so overlapping
+     * heartbeats can't both poll.
+     */
+    private function importBooksFromRss(): void
+    {
+        if (!BookRssSettings::enabled()) return;
+
+        $everyMinutes = max(5, (int) config('book_rss.poll_interval_minutes', 60));
+        $lastAt = (int) Cache::get('book_rss:last_poll_at', 0);
+        $now    = time();
+        if ($now - $lastAt < $everyMinutes * 60) return;
+
+        Cache::put('book_rss:last_poll_at', $now, 86400);
+
+        try {
+            $result = (new BookRssImporter())->import();
+            BookRssSettings::recordRun(
+                "{$result['created']} created, {$result['skipped']} already known, {$result['failed']} failed"
+            );
+        } catch (\Throwable $e) {
+            BookRssSettings::recordRun('Failed: ' . $e->getMessage());
+            Log::warning('Book RSS import failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Pick the oldest book never announced in the Telegram channel and post it
+     * as a photo message. One book per tick, own spacing key.
+     *
+     * Same contract as the Reddit/Pinterest posters: the spacing key is
+     * reserved before the HTTP work so concurrent heartbeats can't double-post,
+     * and a failure still consumes the window.
+     */
+    private function crossPostOneBookToTelegram(): void
+    {
+        if (!TelegramSettings::enabled()) return;
+
+        $cfg    = TelegramSettings::toArray();
+        $poster = new TelegramPoster($cfg);
+        if (!$poster->isReady()) return;
+
+        $spacingMinutes = max(1, (int) $cfg['post_spacing_minutes']);
+        $lastAt = (int) Cache::get('telegram:last_post_at', 0);
+        $now    = time();
+        if ($now - $lastAt < $spacingMinutes * 60) return; // still inside spacing window
+
+        $maxAttempts = (int) $cfg['max_attempts'];
+
+        $book = BookDetail::query()
+            ->whereNull('telegram_message_id')
+            ->where('telegram_attempts', '<', $maxAttempts)
+            ->whereNotNull('cover_url')
+            ->orderBy('id')
+            ->with('post.user:id,username')
+            ->first();
+
+        if (!$book) return;
+
+        // Reserve the next window up-front so concurrent heartbeats don't both
+        // pick this book and double-post it to the channel.
+        Cache::put('telegram:last_post_at', $now, 86400);
+
+        try {
+            $messageId = $poster->postBook($book);
+            $book->update([
+                'telegram_message_id' => $messageId,
+                'telegram_posted_at'  => now(),
+                'telegram_last_error' => null,
+            ]);
+        } catch (\Throwable $e) {
+            $book->increment('telegram_attempts');
+            $book->update(['telegram_last_error' => mb_substr($e->getMessage(), 0, 500)]);
+            Log::warning('Telegram cross-post failed', [
+                'book_id'  => $book->id,
+                'attempts' => $book->telegram_attempts,
                 'error'    => $e->getMessage(),
             ]);
         }

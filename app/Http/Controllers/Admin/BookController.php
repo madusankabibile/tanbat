@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Services\PinterestPoster;
 use App\Services\RedditPoster;
+use App\Services\TelegramPoster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -65,10 +66,18 @@ class BookController extends Controller
         $pinterestReady  = $pinPoster->isReady();
         $pinterestAccount = $pinterestReady ? $pinPoster->connectedAccount() : null;
 
+        // Telegram only needs a token + channel, so "ready" here means
+        // configured — the on/off toggle gates the automatic poster, not the
+        // manual "Post to Telegram" action on each row.
+        $tgPoster        = new TelegramPoster();
+        $telegramReady   = $tgPoster->isConfigured();
+        $telegramChannel = \App\Support\TelegramSettings::chatId();
+
         return view('admin.books.index', compact(
             'books', 'q', 'reddit', 'maxAttempts',
             'redditReady', 'redditAccount', 'subreddit',
-            'pinterestReady', 'pinterestAccount'
+            'pinterestReady', 'pinterestAccount',
+            'telegramReady', 'telegramChannel'
         ));
     }
 
@@ -290,6 +299,49 @@ class BookController extends Controller
             ]);
 
             return back()->with('error', 'Pinterest post failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * (Re)announce a book in the Telegram channel immediately, bypassing the
+     * heartbeat's spacing window. Mirrors repost()/repostPinterest().
+     */
+    public function repostTelegram(BookDetail $book)
+    {
+        $poster = new TelegramPoster();
+
+        if (!$poster->isConfigured()) {
+            return back()->with('error', 'Telegram is not set up. Add the bot token and channel under Integrations → Telegram first.');
+        }
+
+        if (empty($book->cover_url)) {
+            return back()->with('error', 'This book has no cover image, so it can\'t be posted as a photo message.');
+        }
+
+        try {
+            $book->loadMissing('post.user:id,username');
+            $messageId = $poster->postBook($book);
+
+            $book->update([
+                'telegram_message_id' => $messageId,
+                'telegram_posted_at'  => now(),
+                'telegram_attempts'   => 0,
+                'telegram_last_error' => null,
+            ]);
+
+            // Respect the spacing window for the automated poster going forward.
+            Cache::put('telegram:last_post_at', time(), 86400);
+
+            return back()->with('status', "Posted \"{$book->title}\" to Telegram.");
+        } catch (\Throwable $e) {
+            $book->increment('telegram_attempts');
+            $book->update(['telegram_last_error' => mb_substr($e->getMessage(), 0, 500)]);
+            Log::warning('Manual Telegram cross-post failed', [
+                'book_id' => $book->id,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Telegram post failed: ' . $e->getMessage());
         }
     }
 }

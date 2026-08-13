@@ -97,7 +97,13 @@
       "Bash(php /tmp/req2.php)",
       "Bash(rm -f /tmp/leg.php /tmp/new.php /tmp/verify3.php /tmp/req2.php)",
       "Bash(sed -i 's/\\\\$app }}/\\\\$appName }}/g; s/\\\\$app = '\\\\''TubePlay'\\\\''/\\\\$appName = '\\\\''TubePlay'\\\\''/' resources/views/tubeplay/privacy.blade.php)",
-      "Bash(grep -n '\\\\$app\\\\b' resources/views/tubeplay/privacy.blade.php)"
+      "Bash(grep -n '\\\\$app\\\\b' resources/views/tubeplay/privacy.blade.php)",
+      "Read(//h/xampp/htdocs/**)",
+      "Read(//h/xampp/htdocs/tanbat-xd/**)",
+      "Bash(php -l app/Http/Controllers/Clinical/OrthoController.php)",
+      "Bash(curl -s -A \"Mozilla/5.0\" \"https://sinhalaebooks.com/feed/\" -o \"C:/Users/HP/AppData/Local/Temp/claude/H--xampp-htdocs-tanbat-xd-tanbat/b5327e2f-d72f-4658-ba4e-4665a48cd7a2/scratchpad/feed.xml\" -w \"HTTP %{http_code} size=%{size_download}\\\\n\")",
+      "Bash(curl -s \"https://api.telegram.org/bot8209607968:AAFu5-s83v44K29GFjx9Wk3QcZsE6xhI-Yk/getMe\")",
+      "Bash(curl -s \"https://api.telegram.org/bot8209607968:AAFu5-s83v44K29GFjx9Wk3QcZsE6xhI-Yk/getChat?chat_id=@SinhalaFreeBooks\")"
     ]
   }
 }

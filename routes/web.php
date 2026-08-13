@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdvertisementController as AdminAdvertisementController;
 use App\Http\Controllers\Admin\BookController as AdminBookController;
+use App\Http\Controllers\Admin\BookRssController as AdminBookRssController;
 use App\Http\Controllers\Admin\BookSearchController as AdminBookSearchController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Admin\StatisticsController as AdminStatisticsController
 use App\Http\Controllers\Admin\PinterestController as AdminPinterestController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\RedditController as AdminRedditController;
+use App\Http\Controllers\Admin\TelegramController as AdminTelegramController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ArticleFeedController;
 use App\Http\Controllers\AssistantController;
@@ -266,6 +268,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
     Route::post('books',               [AdminBookController::class, 'store'])->name('books.store');
     Route::post('books/{book}/repost', [AdminBookController::class, 'repost'])->name('books.repost');
     Route::post('books/{book}/repost-pinterest', [AdminBookController::class, 'repostPinterest'])->name('books.repost-pinterest');
+    Route::post('books/{book}/repost-telegram',  [AdminBookController::class, 'repostTelegram'])->name('books.repost-telegram');
     Route::delete('books/{book}',      [AdminBookController::class, 'destroy'])->name('books.destroy');
 
     // Categories
@@ -291,6 +294,19 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
     Route::post('pinterest/board',      [AdminPinterestController::class, 'board'])->name('pinterest.board');
     Route::post('pinterest/token',      [AdminPinterestController::class, 'token'])->name('pinterest.token');
     Route::post('pinterest/disconnect', [AdminPinterestController::class, 'disconnect'])->name('pinterest.disconnect');
+
+    // Telegram channel cross-poster (bot token — no OAuth flow)
+    Route::get('telegram',              [AdminTelegramController::class, 'index'])->name('telegram.index');
+    Route::put('telegram',              [AdminTelegramController::class, 'update'])->name('telegram.update');
+    Route::post('telegram/toggle',      [AdminTelegramController::class, 'toggle'])->name('telegram.toggle');
+    Route::post('telegram/test',        [AdminTelegramController::class, 'test'])->name('telegram.test');
+    Route::delete('telegram',           [AdminTelegramController::class, 'disconnect'])->name('telegram.disconnect');
+
+    // Book RSS importer (sinhalaebooks.com → anonymous book posts)
+    Route::get('book-rss',              [AdminBookRssController::class, 'index'])->name('book-rss.index');
+    Route::put('book-rss',              [AdminBookRssController::class, 'update'])->name('book-rss.update');
+    Route::post('book-rss/toggle',      [AdminBookRssController::class, 'toggle'])->name('book-rss.toggle');
+    Route::post('book-rss/import',      [AdminBookRssController::class, 'import'])->name('book-rss.import');
 
     // Advertisements
     Route::get('ads',                  [AdminAdvertisementController::class, 'index'])->name('ads.index');

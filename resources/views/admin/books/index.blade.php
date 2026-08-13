@@ -76,6 +76,7 @@
         <th>Requested by</th>
         <th>Format</th>
         <th>Reddit</th>
+        <th>Telegram</th>
         <th>Added</th>
         <th class="text-right">Actions</th>
       </tr>
@@ -127,14 +128,34 @@
               <span class="badge badge-off">Pending</span>
             @endif
           </td>
+          <td data-label="Telegram">
+            @if($b->telegram_message_id)
+              @if($telegramChannel && str_starts_with($telegramChannel, '@'))
+                <a href="https://t.me/{{ ltrim($telegramChannel, '@') }}/{{ $b->telegram_message_id }}" target="_blank" class="badge badge-on hover:underline">Posted</a>
+              @else
+                <span class="badge badge-on">Posted</span>
+              @endif
+              <div class="mt-0.5 text-[11px] text-slate-500">{{ $b->telegram_posted_at?->diffForHumans() }}</div>
+            @elseif(empty($b->cover_url))
+              <span class="badge badge-off" title="A photo message needs a cover image">No cover</span>
+            @elseif($b->telegram_attempts >= $maxAttempts)
+              <span class="badge badge-expired" title="{{ $b->telegram_last_error }}">Failed ({{ $b->telegram_attempts }})</span>
+            @elseif($b->telegram_attempts > 0)
+              <span class="badge badge-off" title="{{ $b->telegram_last_error }}">Retrying ({{ $b->telegram_attempts }}/{{ $maxAttempts }})</span>
+            @else
+              <span class="badge badge-off">Pending</span>
+            @endif
+          </td>
           <td class="text-xs text-slate-500" data-label="Added">{{ $b->created_at?->format('M j, Y') }}</td>
           <td class="text-right cell-actions">
             @php
               $noCover    = empty($b->cover_url);
               $redditOff  = !$redditReady || $noCover;
               $pinOff     = !$pinterestReady || $noCover;
+              $tgOff      = !$telegramReady || $noCover;
               $redditTip  = !$redditReady ? 'Connect Reddit first' : ($noCover ? 'No cover image to post' : '');
               $pinTip     = !$pinterestReady ? 'Connect Pinterest first' : ($noCover ? 'No cover image to pin' : '');
+              $tgTip      = !$telegramReady ? 'Set up Telegram first' : ($noCover ? 'No cover image to post' : '');
             @endphp
             <div class="row-menu">
               <button type="button" class="row-menu__btn" aria-haspopup="true" aria-expanded="false" title="Actions">
@@ -155,6 +176,14 @@
                   <button type="submit" class="row-menu__item" @disabled($pinOff) title="{{ $pinTip }}">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0a12 12 0 0 0-4.37 23.17c-.1-.94-.2-2.4.04-3.44.22-.93 1.4-5.96 1.4-5.96s-.36-.72-.36-1.78c0-1.67.97-2.92 2.17-2.92 1.02 0 1.51.77 1.51 1.69 0 1.03-.65 2.56-.99 3.98-.28 1.19.6 2.16 1.77 2.16 2.12 0 3.76-2.24 3.76-5.48 0-2.86-2.06-4.86-5-4.86-3.41 0-5.41 2.56-5.41 5.2 0 1.03.4 2.13.89 2.73.1.12.11.22.08.34l-.33 1.35c-.05.22-.17.27-.4.16-1.49-.69-2.42-2.87-2.42-4.62 0-3.76 2.73-7.21 7.88-7.21 4.13 0 7.35 2.95 7.35 6.88 0 4.11-2.59 7.42-6.18 7.42-1.21 0-2.34-.63-2.73-1.37l-.74 2.83c-.27 1.03-1 2.32-1.48 3.11A12 12 0 1 0 12 0Z"/></svg>
                     {{ $b->pinterest_pin_id ? 'Repin to Pinterest' : 'Pin to Pinterest' }}
+                  </button>
+                </form>
+                <form method="POST" action="{{ route('admin.books.repost-telegram', $b) }}"
+                      onsubmit="return confirm('{{ $b->telegram_message_id ? 'Post this book to the Telegram channel again?' : 'Post this book to the Telegram channel now?' }}');">
+                  @csrf
+                  <button type="submit" class="row-menu__item" @disabled($tgOff) title="{{ $tgTip }}">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm5.6 8.2-1.9 8.9c-.14.63-.52.78-1.05.49l-2.9-2.14-1.4 1.35c-.16.15-.29.29-.58.29l.2-2.96 5.4-4.88c.24-.2-.05-.32-.36-.12l-6.68 4.2-2.87-.9c-.63-.2-.64-.63.13-.93l11.2-4.32c.52-.19.98.12.81.93Z"/></svg>
+                    {{ $b->telegram_message_id ? 'Repost to Telegram' : 'Post to Telegram' }}
                   </button>
                 </form>
                 <div class="row-menu__divider"></div>

@@ -38,6 +38,21 @@ class Kernel extends ConsoleKernel
             ->cron('45 */2 * * *')
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Book RSS feed → anonymous book posts. Hourly at :05; the command
+        // no-ops when the importer is disabled at /admin/book-rss.
+        $schedule->command('books:import-rss')
+            ->hourlyAt(5)
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Announce imported books in the Telegram channel. Runs every 10
+        // minutes but posts a single book per run, so a batch drains steadily
+        // instead of flooding the channel.
+        $schedule->command('books:post-telegram --limit=1')
+            ->everyTenMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
