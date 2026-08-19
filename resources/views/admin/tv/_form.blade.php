@@ -3,14 +3,29 @@
 @php
   $channel = $channel ?? null;
   $isEdit  = (bool) $channel;
+  // The category lives on the parent post, not on tv_channels.
+  $currentCategory = old('category_id', $isEdit ? $channel->post?->category_id : null);
 @endphp
 
 <div class="card p-6 lg:col-span-2 grid gap-4">
 
-  <div>
-    <label class="label">Name <span class="text-rose-500">*</span></label>
-    <input type="text" name="name" value="{{ old('name', $channel->name ?? '') }}" class="input" required maxlength="255" autofocus>
-    @error('name') <p class="field-error">{{ $message }}</p> @enderror
+  <div class="grid gap-4 sm:grid-cols-[2fr,1fr]">
+    <div>
+      <label class="label">Name <span class="text-rose-500">*</span></label>
+      <input type="text" name="name" value="{{ old('name', $channel->name ?? '') }}" class="input" required maxlength="255" autofocus>
+      @error('name') <p class="field-error">{{ $message }}</p> @enderror
+    </div>
+
+    <div>
+      <label class="label">Category <span class="text-rose-500">*</span></label>
+      <select name="category_id" class="input" required>
+        <option value="">Select a category…</option>
+        @foreach($categories as $category)
+          <option value="{{ $category->id }}" @selected((int) $currentCategory === $category->id)>{{ $category->name }}</option>
+        @endforeach
+      </select>
+      @error('category_id') <p class="field-error">{{ $message }}</p> @enderror
+    </div>
   </div>
 
   @if($isEdit)

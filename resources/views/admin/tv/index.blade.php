@@ -46,6 +46,17 @@
     <input type="text" name="q" value="{{ $q }}" placeholder="Channel name or slug" class="input">
   </div>
   <div>
+    <label class="label">Category</label>
+    <select name="category" class="input">
+      <option value="">All</option>
+      {{-- Surfaces channels added before the category field existed. --}}
+      <option value="none" @selected($categoryId === 'none')>— Uncategorised —</option>
+      @foreach($categories as $category)
+        <option value="{{ $category->id }}" @selected((string) $categoryId === (string) $category->id)>{{ $category->name }}</option>
+      @endforeach
+    </select>
+  </div>
+  <div>
     <label class="label">Status</label>
     <select name="status" class="input">
       <option value="">All</option>
@@ -65,6 +76,7 @@
     <thead>
       <tr>
         <th>Channel</th>
+        <th>Category</th>
         <th>Public URL</th>
         <th>Status</th>
         <th class="text-right">Views</th>
@@ -89,6 +101,13 @@
                 <div class="truncate text-[11px] text-slate-500">{{ Str::limit(strip_tags((string) $c->description), 60) ?: 'No description' }}</div>
               </div>
             </div>
+          </td>
+          <td data-label="Category">
+            @if($c->post?->category)
+              <span class="badge badge-type">{{ $c->post->category->name }}</span>
+            @else
+              <span class="text-xs text-slate-400">—</span>
+            @endif
           </td>
           <td data-label="Public URL">
             <a href="{{ route('tv.show', $c->slug) }}" target="_blank" class="font-mono text-xs text-brand-600 hover:underline">/tv/{{ $c->slug }}</a>
@@ -136,7 +155,7 @@
           </td>
         </tr>
       @empty
-        <tr><td colspan="6" class="py-8 text-center text-sm text-slate-500">No TV channels match these filters.</td></tr>
+        <tr><td colspan="7" class="py-8 text-center text-sm text-slate-500">No TV channels match these filters.</td></tr>
       @endforelse
     </tbody>
   </table>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Post;
 use App\Models\TvChannel;
 use App\Models\User;
@@ -26,10 +27,13 @@ class TvController extends Controller
 {
     public function index(Request $request)
     {
-        $q      = trim((string) $request->query('q', ''));
-        $status = $request->query('status'); // live | offline
+        $q          = trim((string) $request->query('q', ''));
+        $status     = $request->query('status');       // live | offline
+        $categoryId = $request->query('category');     // categories.id | 'none'
 
-        $query = TvChannel::query()->with('post:id,user_id,created_at');
+        // The category lives on the parent post, so it is eager-loaded through
+        // it — one extra query for the page rather than one per row.
+        $query = TvChannel::query()->with('post:id,user_id,category_id,created_at', 'post.category:id,name,slug');
 
         if ($q !== '') {
             $like = '%' . $q . '%';
@@ -42,6 +46,14 @@ class TvController extends Controller
             default   => $query,
         };
 
+        // Filtering by category means filtering on the post, hence whereHas.
+        // "none" surfaces channels added before the field existed.
+        if ($categoryId === 'none') {
+            $query->whereHas('post', fn ($p) => $p->whereNull('category_id'));
+        } elseif (is_numeric($categoryId)) {
+            $query->whereHas('post', fn ($p) => $p->where('category_id', (int) $categoryId));
+        }
+
         $channels = $query->latest()->paginate(20)->withQueryString();
 
         $totals = [
@@ -51,12 +63,19 @@ class TvController extends Controller
             'views'   => (int) TvChannel::sum('views'),
         ];
 
-        return view('admin.tv.index', compact('channels', 'q', 'status', 'totals'));
+        return view('admin.tv.index', [
+            'channels'   => $channels,
+            'q'          => $q,
+            'status'     => $status,
+            'categoryId' => $categoryId,
+            'totals'     => $totals,
+            'categories' => $this->categories(),
+        ]);
     }
 
     public function create()
     {
-        return view('admin.tv.create');
+        return view('admin.tv.create', ['categories' => $this->categories()]);
     }
 
     public function store(Request $request)
@@ -67,6 +86,7 @@ class TvController extends Controller
             $post = Post::create([
                 'user_id'     => $this->anonymousUserId(),
                 'type'        => 'tv',
+                'category_id' => $data['category_id'],
                 'title'       => $data['name'],
                 'description' => null,
             ]);
@@ -91,7 +111,12 @@ class TvController extends Controller
 
     public function edit(TvChannel $tv)
     {
-        return view('admin.tv.edit', ['channel' => $tv]);
+        $tv->loadMissing('post:id,category_id,title');
+
+        return view('admin.tv.edit', [
+            'channel'    => $tv,
+            'categories' => $this->categories(),
+        ]);
     }
 
     public function update(Request $request, TvChannel $tv)
@@ -113,9 +138,13 @@ class TvController extends Controller
             'is_active'   => $request->boolean('is_active'),
         ]);
 
-        // Keep the parent post's title in step so admin post lists and search
-        // don't show a stale name.
-        $tv->post?->update(['title' => $data['name']]);
+        // Keep the parent post in step: the title so admin post lists and
+        // search don't show a stale name, and the category because that is the
+        // column it actually lives in.
+        $tv->post?->update([
+            'title'       => $data['name'],
+            'category_id' => $data['category_id'],
+        ]);
 
         return redirect()
             ->route('admin.tv.index')
@@ -163,6 +192,10 @@ class TvController extends Controller
         $data = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
             'slug'        => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slugRule],
+            // Required, matching every other post type in this admin. Channels
+            // created before this field existed have a null category and must
+            // be given one the next time they are saved.
+            'category_id' => ['required', 'exists:categories,id'],
             'description' => ['nullable', 'string', 'max:20000'],
             // Accept .m3u8 and .m3u alike; some providers serve a query-string
             // manifest with no extension at all, so only the scheme is required.
@@ -172,13 +205,24 @@ class TvController extends Controller
             'logo_file'   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif,svg', 'max:2048'],
             'logo_url'    => ['nullable', 'url', 'max:1024'],
         ], [
-            'stream_url.regex' => 'The stream link must start with http:// or https://.',
-            'slug.regex'       => 'The URL slug may only contain lowercase letters, numbers and single hyphens.',
+            'stream_url.regex'    => 'The stream link must start with http:// or https://.',
+            'slug.regex'          => 'The URL slug may only contain lowercase letters, numbers and single hyphens.',
+            'category_id.required' => 'Choose a category for this channel.',
         ]);
 
         $data['slug'] = trim((string) ($data['slug'] ?? ''));
 
         return $data;
+    }
+
+    /**
+     * The shared site-wide category list, for the form select and the index
+     * filter. TV reuses `categories` rather than owning its own vocabulary, so
+     * a channel sits in the same taxonomy as articles, images and videos.
+     */
+    private function categories()
+    {
+        return Category::orderBy('name')->get(['id', 'name']);
     }
 
     /**

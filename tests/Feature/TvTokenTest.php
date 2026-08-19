@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
 use App\Support\TvStreamToken;
 use Illuminate\Http\Request;
@@ -11,11 +11,14 @@ use Tests\TestCase;
 /**
  * Token rules for the TV stream proxy (App\Support\TvStreamToken).
  *
- * These live at the unit level because the binding they enforce is per-request:
- * the test HTTP harness runs on the array session driver, which mints a new
- * session id on every request, so a feature test cannot tell a working binding
- * from a broken one. Here the Request - session id, IP, user-agent - is ours
- * to control.
+ * Filed under Feature, not Unit, because these need the framework booted -
+ * TvStreamToken reads config() and encrypts through Crypt with the app key.
+ *
+ * They build their own Request rather than going through the HTTP harness on
+ * purpose: the binding they verify is per-request, and the test harness runs on
+ * the array session driver, which mints a new session id on every request. A
+ * request-level test therefore could not tell a working binding from a broken
+ * one. Here the session id, IP and user-agent are ours to control.
  */
 class TvTokenTest extends TestCase
 {

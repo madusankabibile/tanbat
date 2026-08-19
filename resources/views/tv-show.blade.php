@@ -110,6 +110,9 @@
           <h1 class="tv-title">{{ $channel->name }}</h1>
           <div class="tv-badges">
             <span class="tv-live" data-tv-live><i></i>Live</span>
+            @if($channel->post?->category)
+              <a href="{{ route('tv.index', ['category' => $channel->post->category->slug]) }}" class="tv-cat">{{ $channel->post->category->name }}</a>
+            @endif
             <span class="tv-views">{{ number_format($stats['views']) }} views</span>
           </div>
         </div>
@@ -298,6 +301,12 @@
   70%  { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
   100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
 }
+.tv-cat {
+  display: inline-flex; align-items: center; border-radius: 9999px;
+  padding: 3px 10px; background: #EEF2FF; color: #4338CA;
+  font-size: 11px; font-weight: 700;
+}
+.tv-cat:hover { background: #E0E7FF; }
 .tv-views { font-size: 12.5px; font-weight: 600; color: #64748B; }
 .tv-share {
   display: inline-flex; align-items: center; gap: 7px; flex: none;

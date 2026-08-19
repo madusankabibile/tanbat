@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\TvChannel;
 use Illuminate\Http\Request;
 
@@ -14,16 +15,30 @@ use Illuminate\Http\Request;
  */
 class TvController extends Controller
 {
-    /** GET /tv — every live channel, most-watched first. */
+    /** GET /tv — every live channel, most-watched first, filterable by category. */
     public function index(Request $request)
     {
         $q = trim((string) $request->query('q', ''));
 
-        $query = TvChannel::query()->where('is_active', true);
+        // Categories live on the parent post, so both the filter and the card
+        // labels reach through it.
+        $query = TvChannel::query()
+            ->where('is_active', true)
+            ->with('post:id,category_id', 'post.category:id,name,slug');
 
         if ($q !== '') {
             $like = '%' . $q . '%';
             $query->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('description', 'like', $like));
+        }
+
+        // Filter by category slug so /tv?category=sports is a shareable URL.
+        $categorySlug = trim((string) $request->query('category', ''));
+        $category = $categorySlug !== ''
+            ? Category::where('slug', $categorySlug)->first()
+            : null;
+
+        if ($category) {
+            $query->whereHas('post', fn ($p) => $p->where('category_id', $category->id));
         }
 
         $channels = $query
@@ -32,13 +47,20 @@ class TvController extends Controller
             ->paginate(24)
             ->withQueryString();
 
-        return view('tv', compact('channels', 'q'));
+        return view('tv', [
+            'channels'   => $channels,
+            'q'          => $q,
+            'category'   => $category,
+            'categories' => $this->liveCategories(),
+        ]);
     }
 
     /** GET /tv/{slug} — the player page. */
     public function show(Request $request, string $slug)
     {
-        $channel = TvChannel::where('slug', $slug)->firstOrFail();
+        $channel = TvChannel::with('post:id,category_id', 'post.category:id,name,slug')
+            ->where('slug', $slug)
+            ->firstOrFail();
 
         // One canonical URL per channel. MySQL's collation matches slugs
         // case-insensitively, so /tv/sampleTV finds the row — send it on to
@@ -57,10 +79,18 @@ class TvController extends Controller
         // one UPDATE and never fires observers on a hot page.
         TvChannel::whereKey($channel->id)->increment('views');
 
-        // The right rail's "related channels". Random-ish rotation via views
-        // so the rail isn't identical on every channel.
+        // The right rail's "related channels" — genuinely related now that
+        // channels are categorised: same category first, then everything else
+        // to fill the rail, most-watched within each group.
+        $categoryId = $channel->post?->category_id;
+
         $related = TvChannel::where('is_active', true)
             ->whereKeyNot($channel->id)
+            ->with('post:id,category_id', 'post.category:id,name,slug')
+            ->when($categoryId, fn ($q) => $q->orderByRaw(
+                '(SELECT posts.category_id FROM posts WHERE posts.id = tv_channels.post_id) = ? DESC',
+                [$categoryId]
+            ))
             ->orderByDesc('views')
             ->limit(12)
             ->get();
@@ -73,6 +103,19 @@ class TvController extends Controller
         ];
 
         return view('tv-show', compact('channel', 'related', 'stats'));
+    }
+
+    /**
+     * Categories that actually have a live channel in them — an empty filter
+     * option is just a dead end for the viewer.
+     */
+    private function liveCategories()
+    {
+        return Category::whereHas('posts', fn ($p) => $p
+                ->where('type', 'tv')
+                ->whereHas('tvChannel', fn ($c) => $c->where('is_active', true)))
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
     }
 
     private function viewerIsAdmin(Request $request): bool

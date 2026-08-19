@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Post;
 use App\Models\TvChannel;
 use App\Models\User;
@@ -42,7 +43,7 @@ class TvStreamTest extends TestCase
         parent::tearDown();
     }
 
-    private function makeChannel(): TvChannel
+    private function makeChannel(?int $categoryId = null): TvChannel
     {
         $userId = User::firstOrCreate(
             ['username' => 'anonymous'],
@@ -52,7 +53,12 @@ class TvStreamTest extends TestCase
             ]
         )->id;
 
-        $post = Post::create(['user_id' => $userId, 'type' => 'tv', 'title' => 'Proxy Test Channel']);
+        $post = Post::create([
+            'user_id'     => $userId,
+            'type'        => 'tv',
+            'category_id' => $categoryId,
+            'title'       => 'Proxy Test Channel',
+        ]);
 
         return $this->channel = TvChannel::create([
             'post_id'     => $post->id,
@@ -200,5 +206,54 @@ class TvStreamTest extends TestCase
     public function test_an_unknown_channel_is_a_404(): void
     {
         $this->get('/tv/no-such-channel-here')->assertNotFound();
+    }
+
+    public function test_the_grid_filters_by_category(): void
+    {
+        $category = Category::orderBy('id')->first();
+        if (!$category) {
+            $this->markTestSkipped('No categories in the database.');
+        }
+
+        $channel = $this->makeChannel($category->id);
+
+        // In its own category the channel shows up...
+        $this->get('/tv?category=' . $category->slug)
+            ->assertOk()
+            ->assertSee("/tv/{$channel->slug}", false);
+
+        // ...and under a different one it does not.
+        $other = Category::where('id', '!=', $category->id)->first();
+        if ($other) {
+            $this->get('/tv?category=' . $other->slug)
+                ->assertOk()
+                ->assertDontSee("/tv/{$channel->slug}", false);
+        }
+    }
+
+    public function test_the_player_page_shows_the_category(): void
+    {
+        $category = Category::orderBy('id')->first();
+        if (!$category) {
+            $this->markTestSkipped('No categories in the database.');
+        }
+
+        $channel = $this->makeChannel($category->id);
+
+        $this->get("/tv/{$channel->slug}")
+            ->assertOk()
+            // Escaped on purpose: a name like "Art & Design" renders as
+            // "Art &amp; Design", so the expectation has to be escaped too.
+            ->assertSee($category->name)
+            // The badge links back into the filtered grid.
+            ->assertSee('category=' . $category->slug, false);
+    }
+
+    public function test_an_unknown_category_filter_does_not_break_the_grid(): void
+    {
+        $this->makeChannel();
+
+        // A bogus slug is ignored rather than 500-ing or returning nothing.
+        $this->get('/tv?category=no-such-category')->assertOk();
     }
 }
