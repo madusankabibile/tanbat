@@ -62,6 +62,11 @@ class Post extends Model
         return $this->hasOne(BookDetail::class);
     }
 
+    public function tvChannel(): HasOne
+    {
+        return $this->hasOne(TvChannel::class);
+    }
+
     public function likers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'post_likes')
@@ -127,6 +132,7 @@ class Post extends Model
         return match ($this->type) {
             'article' => url('/articles/' . $this->slug),
             'book'    => url('/books/' . $this->slug),
+            'tv'      => url('/tv/' . ($this->tvChannel?->slug ?? $this->slug)),
             // Status / image / video posts each get their own shareable page.
             'status', 'image', 'video' => url('/posts/' . $this->type . '/' . $this->id),
             default   => url('/home#post-' . $this->id),

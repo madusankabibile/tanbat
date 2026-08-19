@@ -20,6 +20,7 @@ export default defineConfig({
                 'resources/js/assistant.js',
                 'resources/js/books.js',
                 'resources/js/book-show.js',
+                'resources/js/tv-player.js',
                 'resources/js/runtime-check.js',
             ],
             refresh: true,

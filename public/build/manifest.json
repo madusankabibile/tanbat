@@ -8,7 +8,7 @@
     "name": "cards"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CCIjhHSf.css",
+    "file": "assets/app-bSpO0qC6.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -110,6 +110,12 @@
     "file": "assets/sidebars-D4kEGvYq.js",
     "name": "sidebars",
     "src": "resources/js/sidebars.js",
+    "isEntry": true
+  },
+  "resources/js/tv-player.js": {
+    "file": "assets/tv-player-BsX5BFdd.js",
+    "name": "tv-player",
+    "src": "resources/js/tv-player.js",
     "isEntry": true
   },
   "resources/js/user-deleted.js": {

@@ -61,6 +61,18 @@
       <svg class="saved-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
     </a>
 
+    {{-- Live TV --}}
+    <a href="{{ url('/tv') }}" class="panel books-cta {{ request()->is('tv') || request()->is('tv/*') ? 'is-active' : '' }}">
+      <span class="books-orb" style="background:linear-gradient(135deg,#EF4444,#F97316);box-shadow:0 6px 16px rgba(239,68,68,.28);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+      </span>
+      <span class="books-text">
+        <strong>TV</strong>
+        <span class="books-sub-text">Watch live channels free</span>
+      </span>
+      <svg class="saved-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+
     {{-- Blog CTA --}}
     <a href="{{ url('/blog') }}" class="panel books-cta {{ request()->is('blog') ? 'is-active' : '' }}">
       <span class="books-orb" style="background:linear-gradient(135deg,#6C63FF,#A78BFA);box-shadow:0 6px 16px rgba(108,99,255,.28);">

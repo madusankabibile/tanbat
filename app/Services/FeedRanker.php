@@ -161,11 +161,13 @@ class FeedRanker
 
         // Query factory — lets us re-run without the seen filter to recycle.
         $build = function (array $skipIds) use ($botIds, $jitter, $limit) {
-            // Book posts are members-only — never expose them to anonymous viewers.
+            // Book posts are members-only — never expose them to anonymous
+            // viewers. TV posts have no feed card at all (they live on /tv), so
+            // they'd render as an empty gap; keep them out of the feed entirely.
             $q = Post::with(['user:id,name,username,profile_picture', 'category', 'media', 'tags'])
                 ->select('posts.*')
                 ->where('is_adult', false)
-                ->where('type', '!=', 'book');
+                ->whereNotIn('type', ['book', 'tv']);
             if (!empty($skipIds)) $q->whereNotIn('id', $skipIds);
 
             // Tier 1: articles above everything else. Single-quoted SQL literal

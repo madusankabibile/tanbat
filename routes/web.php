@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\PinterestController as AdminPinterestController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\RedditController as AdminRedditController;
 use App\Http\Controllers\Admin\TelegramController as AdminTelegramController;
+use App\Http\Controllers\Admin\TvController as AdminTvController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ArticleFeedController;
 use App\Http\Controllers\AssistantController;
@@ -27,6 +28,8 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\SaveCategoryController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TaskRunnerController;
+use App\Http\Controllers\TvController;
+use App\Http\Controllers\TvStreamController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserFeedController;
 use Illuminate\Support\Facades\Route;
@@ -129,6 +132,24 @@ Route::get('/books',             [AssistantController::class, 'booksPage'])->nam
 // BEFORE the {slug} route so "feed.xml" isn't swallowed as a book slug.
 Route::get('/books/feed.xml',    [BookFeedController::class, 'rss'])->name('books.feed');
 Route::get('/books/{slug}',      [AssistantController::class, 'show'])->name('books.show');
+
+/* Live TV — public channel grid + player page.
+   The stream proxy routes are declared BEFORE /tv/{slug} so a token path is
+   never swallowed as a channel slug. Slugs are constrained to the slug charset
+   for the same reason. */
+Route::get('/tv',                       [TvController::class, 'index'])->name('tv.index');
+Route::get('/tv/s/{token}/index.m3u8',  [TvStreamController::class, 'playlist'])->name('tv.stream.playlist');
+Route::get('/tv/s/{token}/seg',         [TvStreamController::class, 'segment'])->name('tv.stream.segment');
+// Minting a playback session is a POST so the URL can't simply be pasted, and
+// so it picks up CSRF + the same-origin check in TvStreamController.
+Route::post('/tv/{channel:slug}/session', [TvStreamController::class, 'session'])
+    ->where('channel', '[A-Za-z0-9-]+')
+    ->name('tv.session');
+// Mixed-case links (/tv/sampleTV) are accepted and 301'd to the canonical
+// lowercase slug, rather than falling through to the catch-all as a 404.
+Route::get('/tv/{slug}',                [TvController::class, 'show'])
+    ->where('slug', '[A-Za-z0-9-]+')
+    ->name('tv.show');
 
 /*
 |--------------------------------------------------------------------------
@@ -270,6 +291,15 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
     Route::post('books/{book}/repost-pinterest', [AdminBookController::class, 'repostPinterest'])->name('books.repost-pinterest');
     Route::post('books/{book}/repost-telegram',  [AdminBookController::class, 'repostTelegram'])->name('books.repost-telegram');
     Route::delete('books/{book}',      [AdminBookController::class, 'destroy'])->name('books.destroy');
+
+    // TV channels (tv-type posts + the HLS stream config behind each one)
+    Route::get('tv',                   [AdminTvController::class, 'index'])->name('tv.index');
+    Route::get('tv/create',            [AdminTvController::class, 'create'])->name('tv.create');
+    Route::post('tv',                  [AdminTvController::class, 'store'])->name('tv.store');
+    Route::get('tv/{tv}/edit',         [AdminTvController::class, 'edit'])->name('tv.edit');
+    Route::put('tv/{tv}',              [AdminTvController::class, 'update'])->name('tv.update');
+    Route::post('tv/{tv}/toggle',      [AdminTvController::class, 'toggle'])->name('tv.toggle');
+    Route::delete('tv/{tv}',           [AdminTvController::class, 'destroy'])->name('tv.destroy');
 
     // Categories
     Route::get('categories',           [AdminCategoryController::class, 'index'])->name('categories.index');
