@@ -85,6 +85,9 @@
       <div class="tv-overlay" data-tv-overlay hidden>
         <span class="tv-spinner" data-tv-spinner hidden aria-hidden="true"></span>
         <p class="tv-status" data-tv-status role="status"></p>
+        <button type="button" class="tv-play" data-tv-play hidden aria-label="Play">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.54.84l10.28-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14Z"/></svg>
+        </button>
         <button type="button" class="tv-retry" data-tv-retry hidden>Try again</button>
       </div>
 
@@ -269,6 +272,20 @@
   background: #6366F1; color: #fff; font-size: 13px; font-weight: 700;
 }
 .tv-retry:hover { background: #4F46E5; }
+
+/* Shown when autoplay is blocked — the overlay hides the native play control,
+   so this is the only thing the viewer can actually click. */
+.tv-play {
+  display: grid; place-items: center; cursor: pointer;
+  height: 68px; width: 68px; padding: 0; border: 0; border-radius: 9999px;
+  background: rgba(99, 102, 241, .95); color: #fff;
+  box-shadow: 0 8px 24px rgba(11, 16, 32, .45);
+  transition: transform .15s ease, background .15s ease;
+}
+.tv-play svg { height: 32px; width: 32px; margin-left: 3px; }
+.tv-play:hover { background: #4F46E5; transform: scale(1.06); }
+.tv-play[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .tv-play { transition: none; } }
 
 /* ───── Name + description ───── */
 .tv-meta {

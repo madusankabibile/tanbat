@@ -29,6 +29,7 @@ if (root) {
   const statusEl = root.querySelector('[data-tv-status]');
   const spinner  = root.querySelector('[data-tv-spinner]');
   const retryBtn = root.querySelector('[data-tv-retry]');
+  const playBtn  = root.querySelector('[data-tv-play]');
   const liveDot  = document.querySelector('[data-tv-live]');
 
   const sessionUrl = root.dataset.session;
@@ -44,10 +45,11 @@ if (root) {
 
   /* ───────── status chrome ───────── */
 
-  function setStatus(text, { busy = false, retry = false } = {}) {
+  function setStatus(text, { busy = false, retry = false, play = false } = {}) {
     if (statusEl) statusEl.textContent = text || '';
     if (spinner)  spinner.hidden = !busy;
     if (retryBtn) retryBtn.hidden = !retry;
+    if (playBtn)  playBtn.hidden  = !play;
     if (overlay)  overlay.hidden = !text;
   }
 
@@ -57,6 +59,14 @@ if (root) {
 
   function markLive(on) {
     liveDot?.classList.toggle('is-live', !!on);
+  }
+
+  // Autoplay with sound is blocked until the viewer interacts. Ask for that one
+  // click explicitly — the overlay is on top of the native controls, so telling
+  // the viewer to "press play" without giving them a button is a dead end.
+  function promptPlay() {
+    markLive(false);
+    setStatus('Press play to start watching.', { play: true });
   }
 
   /* ───────── session + playback ───────── */
@@ -113,7 +123,7 @@ if (root) {
     // proxy URL either way, so the origin still never appears.
     if ((!Hls || !Hls.isSupported()) && video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
-      video.play().catch(() => {});
+      video.play().catch(promptPlay);
       return;
     }
 
@@ -139,11 +149,7 @@ if (root) {
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
       clearStatus();
       markLive(true);
-      video.play().catch(() => {
-        // Autoplay with sound is blocked until the viewer interacts — that is
-        // expected, and the native controls are right there.
-        setStatus('Press play to start watching.', {});
-      });
+      video.play().catch(promptPlay);
     });
 
     hls.on(Hls.Events.ERROR, async (_evt, data) => {
@@ -182,6 +188,14 @@ if (root) {
   }
 
   retryBtn?.addEventListener('click', () => start());
+
+  // The click that starts playback has to come from inside the overlay: it
+  // covers the whole frame, so the native play control underneath is not
+  // reachable while a message is showing.
+  playBtn?.addEventListener('click', () => {
+    clearStatus();
+    video.play().then(() => markLive(true)).catch(promptPlay);
+  });
 
   // Only surface "Buffering…" if the stall actually lasts. A live stream dips
   // in and out of `waiting` constantly, and flashing a dark overlay on every
