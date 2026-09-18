@@ -77,12 +77,11 @@ class RecordVisitor
 
             $this->recordPageView($token, $host, $path);
 
-            // Occasionally prune rows we'll never show to keep the tables small.
-            if (random_int(1, 50) === 1) {
-                Visitor::where('updated_at', '<', now()->subDays(self::VISITOR_RETENTION_DAYS))->delete();
-                DB::table('visitor_page_views')
-                    ->where('day', '<', now()->subDays(self::PAGE_VIEW_RETENTION_DAYS)->toDateString())
-                    ->delete();
+            // Retention and aggregation are managed by the scheduled AnalyticsAggregator
+            // command (and TaskRunnerController heartbeat). As a low-frequency fallback,
+            // occasionally run aggregation and pruning.
+            if (random_int(1, 200) === 1) {
+                app(\App\Services\AnalyticsAggregator::class)->aggregateAndPrunePageViews();
             }
         } catch (\Throwable $e) {
             // Analytics must never break a request — swallow everything.

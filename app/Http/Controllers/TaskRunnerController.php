@@ -30,10 +30,11 @@ class TaskRunnerController extends Controller
 {
     /** Cadence per bot, in seconds. Mirrors App\Console\Kernel. */
     private array $jobs = [
-        'meme'  => ['cmd' => 'bot:post-meme',  'every' => 50 * 60],
-        'video' => ['cmd' => 'bot:post-video', 'every' => 90 * 60],
-        'news'  => ['cmd' => 'bot:post-news',  'every' => 120 * 60],
-        'ad'    => ['cmd' => 'bot:post-ad',    'every' => 120 * 60],
+        'meme'      => ['cmd' => 'bot:post-meme',  'every' => 50 * 60],
+        'video'     => ['cmd' => 'bot:post-video', 'every' => 90 * 60],
+        'news'      => ['cmd' => 'bot:post-news',  'every' => 120 * 60],
+        'ad'        => ['cmd' => 'bot:post-ad',    'every' => 120 * 60],
+        'analytics' => ['cmd' => 'analytics:prune', 'every' => 60 * 60],
     ];
 
     public function run(Request $request): JsonResponse

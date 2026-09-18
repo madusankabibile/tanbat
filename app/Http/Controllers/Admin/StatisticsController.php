@@ -190,10 +190,21 @@ class StatisticsController extends Controller
         $today     = now()->toDateString();
         $yesterday = now()->subDay()->toDateString();
 
-        $day = fn (string $d) => DB::table('visitor_page_views')
-            ->where('day', $d)
-            ->selectRaw('COALESCE(SUM(hits), 0) AS views, COUNT(DISTINCT visitor_token) AS uniques')
-            ->first();
+        $day = function (string $d) {
+            $summary = DB::table('daily_traffic_summaries')
+                ->where('day', $d)
+                ->selectRaw('COALESCE(SUM(views), 0) AS views, COALESCE(SUM(uniques), 0) AS uniques')
+                ->first();
+
+            if ($summary && ($summary->views > 0 || $summary->uniques > 0)) {
+                return $summary;
+            }
+
+            return DB::table('visitor_page_views')
+                ->where('day', $d)
+                ->selectRaw('COALESCE(SUM(hits), 0) AS views, COUNT(DISTINCT visitor_token) AS uniques')
+                ->first();
+        };
 
         $now  = $day($today);
         $prev = $day($yesterday);
@@ -233,10 +244,27 @@ class StatisticsController extends Controller
      */
     private function trafficStats(string $sinceDate, Carbon $since, Carbon $prevFrom): array
     {
-        $window = fn (string $from, string $to) => DB::table('visitor_page_views')
-            ->whereBetween('day', [$from, $to])
-            ->selectRaw('COALESCE(SUM(hits), 0) AS views, COUNT(DISTINCT visitor_token) AS uniques')
-            ->first();
+        $window = function (string $from, string $to) {
+            $hist = DB::table('daily_traffic_summaries')
+                ->whereBetween('day', [$from, $to])
+                ->selectRaw('COALESCE(SUM(views), 0) AS views, COALESCE(SUM(uniques), 0) AS uniques')
+                ->first();
+
+            $active = DB::table('visitor_page_views')
+                ->whereBetween('day', [$from, $to])
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('daily_traffic_summaries')
+                        ->whereColumn('daily_traffic_summaries.day', 'visitor_page_views.day');
+                })
+                ->selectRaw('COALESCE(SUM(hits), 0) AS views, COUNT(DISTINCT visitor_token) AS uniques')
+                ->first();
+
+            return (object) [
+                'views'   => (int) (($hist->views ?? 0) + ($active->views ?? 0)),
+                'uniques' => (int) (($hist->uniques ?? 0) + ($active->uniques ?? 0)),
+            ];
+        };
 
         $yesterday = $since->copy()->subDay()->toDateString();
         $current = $window($sinceDate, now()->toDateString());
@@ -245,31 +273,68 @@ class StatisticsController extends Controller
         $views   = (int) $current->views;
         $uniques = (int) $current->uniques;
 
-        // Bot share is a property of the visitor, not of a page view, so it can
-        // only be computed from `visitors` — and only over its 30-day window.
-        $knownVisitors = Visitor::count();
-        $botVisitors   = Visitor::bots()->count();
+        // Bot share combines historical device breakdown + active visitors table
+        $histBots = (int) DB::table('daily_device_summaries')
+            ->where('day', '>=', $sinceDate)
+            ->where('is_bot', 1)
+            ->sum('visitors');
+        $histTotal = (int) DB::table('daily_device_summaries')
+            ->where('day', '>=', $sinceDate)
+            ->sum('visitors');
+
+        $activeVisitors = Visitor::count();
+        $activeBots     = Visitor::bots()->count();
+
+        $knownVisitors = $histTotal + $activeVisitors;
+        $botVisitors   = $histBots + $activeBots;
+
+        // Distinct countries across summaries + active visitors
+        $histCountries = DB::table('daily_country_summaries')
+            ->where('day', '>=', $sinceDate)
+            ->where('country_code', '!=', 'XX')
+            ->distinct()
+            ->pluck('country_code');
+        $activeCountries = Visitor::whereNotNull('country_code')
+            ->where('country_code', '!=', '')
+            ->distinct()
+            ->pluck('country_code');
+        $countriesCount = $histCountries->merge($activeCountries)->unique()->count();
 
         return [
-            'views'          => $views,
-            'uniques'        => $uniques,
-            'views_prior'    => (int) $prior->views,
-            'uniques_prior'  => (int) $prior->uniques,
-            'views_trend'    => $this->movement((int) $current->views, (int) $prior->views),
-            'uniques_trend'  => $this->movement($uniques, (int) $prior->uniques),
+            'views'             => $views,
+            'uniques'           => $uniques,
+            'views_prior'       => (int) $prior->views,
+            'uniques_prior'     => (int) $prior->uniques,
+            'views_trend'       => $this->movement((int) $current->views, (int) $prior->views),
+            'uniques_trend'     => $this->movement($uniques, (int) $prior->uniques),
             'views_per_visitor' => $uniques > 0 ? round($views / $uniques, 1) : 0.0,
-            'countries_count' => (int) Visitor::whereNotNull('country_code')->distinct()->count('country_code'),
-            'total_visitors' => $knownVisitors,
-            'bot_visitors'   => $botVisitors,
-            'bot_share'      => $knownVisitors > 0 ? round($botVisitors / $knownVisitors * 100, 1) : 0.0,
+            'countries_count'   => $countriesCount,
+            'total_visitors'    => $knownVisitors,
+            'bot_visitors'      => $botVisitors,
+            'bot_share'         => $knownVisitors > 0 ? round($botVisitors / $knownVisitors * 100, 1) : 0.0,
         ];
     }
 
     /** Views and unique visitors per day, zero-filled across the whole window. */
     private function trafficSeries(Carbon $start, Carbon $end): array
     {
-        $rows = DB::table('visitor_page_views')
-            ->where('day', '>=', $start->toDateString())
+        $startDate = $start->toDateString();
+        $endDate = $end->toDateString();
+
+        $histRows = DB::table('daily_traffic_summaries')
+            ->whereBetween('day', [$startDate, $endDate])
+            ->selectRaw('day, SUM(views) AS views, SUM(uniques) AS uniques')
+            ->groupBy('day')
+            ->get()
+            ->keyBy(fn ($r) => (string) $r->day);
+
+        $activeRows = DB::table('visitor_page_views')
+            ->whereBetween('day', [$startDate, $endDate])
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('daily_traffic_summaries')
+                    ->whereColumn('daily_traffic_summaries.day', 'visitor_page_views.day');
+            })
             ->selectRaw('day, SUM(hits) AS views, COUNT(DISTINCT visitor_token) AS uniques')
             ->groupBy('day')
             ->get()
@@ -278,7 +343,7 @@ class StatisticsController extends Controller
         $out = [];
         for ($cursor = $start->copy(); $cursor->lte($end); $cursor->addDay()) {
             $key = $cursor->toDateString();
-            $row = $rows->get($key);
+            $row = $histRows->get($key) ?? $activeRows->get($key);
             $out[] = [
                 'date'    => $key,
                 'views'   => (int) ($row->views ?? 0),
@@ -288,22 +353,44 @@ class StatisticsController extends Controller
         return $out;
     }
 
-    /** True top pages: real per-path view counts, not "the last page each visitor saw". */
+    /** True top pages: real per-path view counts, combining historical summaries + active views. */
     private function topPages(string $sinceDate): array
     {
-        return DB::table('visitor_page_views')
+        $histPages = DB::table('daily_page_summaries')
             ->where('day', '>=', $sinceDate)
+            ->selectRaw('path, SUM(views) AS views, SUM(uniques) AS uniques')
+            ->groupBy('path')
+            ->get()
+            ->keyBy('path');
+
+        $activePages = DB::table('visitor_page_views')
+            ->where('day', '>=', $sinceDate)
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('daily_page_summaries')
+                    ->whereColumn('daily_page_summaries.day', 'visitor_page_views.day');
+            })
             ->selectRaw('path, SUM(hits) AS views, COUNT(DISTINCT visitor_token) AS uniques')
             ->groupBy('path')
-            ->orderByDesc('views')
-            ->limit(12)
             ->get()
-            ->map(fn ($r) => [
-                'path'    => $r->path,
-                'views'   => (int) $r->views,
-                'uniques' => (int) $r->uniques,
-            ])
-            ->all();
+            ->keyBy('path');
+
+        $allPaths = $histPages->keys()->merge($activePages->keys())->unique();
+
+        $merged = [];
+        foreach ($allPaths as $path) {
+            $h = $histPages->get($path);
+            $a = $activePages->get($path);
+            $merged[] = [
+                'path'    => (string) $path,
+                'views'   => (int) (($h->views ?? 0) + ($a->views ?? 0)),
+                'uniques' => (int) (($h->uniques ?? 0) + ($a->uniques ?? 0)),
+            ];
+        }
+
+        usort($merged, fn ($x, $y) => $y['views'] <=> $x['views']);
+
+        return array_slice($merged, 0, 12);
     }
 
     /**
@@ -316,60 +403,140 @@ class StatisticsController extends Controller
      */
     private function countries(Carbon $since, ?int $limit = 12): array
     {
-        $query = Visitor::where('updated_at', '>=', $since)
+        $sinceDate = $since->toDateString();
+
+        // 1. From daily_country_summaries
+        $hist = DB::table('daily_country_summaries')
+            ->where('day', '>=', $sinceDate)
+            ->selectRaw('country_code AS code, country_name AS name, SUM(visitors) AS visitors, SUM(hits) AS hits')
+            ->groupBy('country_code', 'country_name')
+            ->get()
+            ->keyBy('code');
+
+        // 2. From active Visitor table
+        $active = Visitor::where('updated_at', '>=', $since)
             ->selectRaw("COALESCE(country_code, 'XX') AS code,
                          COALESCE(country_name, 'Unknown') AS name,
                          COUNT(*) AS visitors,
                          SUM(hits) AS hits")
             ->groupBy('code', 'name')
-            ->orderByDesc('visitors');
+            ->get()
+            ->keyBy('code');
 
-        if ($limit !== null) {
-            $query->limit($limit);
+        $allCodes = $hist->keys()->merge($active->keys())->unique();
+
+        $merged = [];
+        foreach ($allCodes as $code) {
+            $h = $hist->get($code);
+            $a = $active->get($code);
+            $name = $h?->name ?: ($a?->name ?: 'Unknown');
+            $merged[] = [
+                'code'     => $code,
+                'name'     => $name,
+                'visitors' => (int) (($h->visitors ?? 0) + ($a->visitors ?? 0)),
+                'hits'     => (int) (($h->hits ?? 0) + ($a->hits ?? 0)),
+            ];
         }
 
-        return $query->get()
-            ->map(fn ($r) => [
-                'code'     => $r->code,
-                'name'     => $r->name,
-                'visitors' => (int) $r->visitors,
-                'hits'     => (int) $r->hits,
-            ])
-            ->all();
+        usort($merged, fn ($x, $y) => $y['visitors'] <=> $x['visitors']);
+
+        if ($limit !== null) {
+            $merged = array_slice($merged, 0, $limit);
+        }
+
+        return $merged;
     }
 
     /**
      * The referrer panel: referring hosts ranked by visitors, plus the exact
      * links behind the one the reader has opened (`?ref=<host>`).
      *
-     * The drill-down is honest because RecordVisitor writes `page`, `host` and
-     * `referrer` in the *same* request and nulls the referrer on same-host
-     * navigation: any row still carrying a referrer therefore holds a genuine
-     * triple — the link that was clicked, and the page (on which site) it opened.
-     *
-     * `$omrmsOnly` restricts it to arrivals that landed on omrms.com, which is
-     * what the OMRMS tab renders with the very same partial.
+     * Combines historical daily_referrer_summaries with active visitor sessions.
      */
     private function referrersTab(Request $request, Carbon $since, bool $omrmsOnly = false): array
     {
-        $byHost = $this->referrerRows($since, $omrmsOnly);
+        $sinceDate = $since->toDateString();
+
+        // 1. Historical referrer summaries
+        $histQuery = DB::table('daily_referrer_summaries')->where('day', '>=', $sinceDate);
+        if ($omrmsOnly) {
+            Omrms::onlyHost($histQuery);
+        }
+        $histRows = $histQuery->get();
+
+        // 2. Active visitors table
+        $activeByHost = $this->referrerRows($since, $omrmsOnly);
+
+        $histByHost = $histRows->groupBy('referrer_host');
+        $allHosts   = $histByHost->keys()->merge($activeByHost->keys())->unique();
+
+        $rankedHosts = [];
+        foreach ($allHosts as $h) {
+            $hRows = $histByHost->get($h, collect());
+            $aRows = $activeByHost->get($h, collect());
+
+            $visitors = (int) $hRows->sum('visitors') + $aRows->count();
+            $hits     = (int) $hRows->sum('hits') + (int) $aRows->sum('hits');
+
+            $rankedHosts[] = [
+                'host'     => $h,
+                'visitors' => $visitors,
+                'hits'     => $hits,
+            ];
+        }
+
+        usort($rankedHosts, fn ($x, $y) => $y['visitors'] <=> $x['visitors']);
+        $rankedHosts = array_slice($rankedHosts, 0, self::REFERRER_HOSTS);
 
         $ref  = (string) $request->query('ref', '');
-        $host = $byHost->has($ref) ? $ref : null;
+        $host = collect($rankedHosts)->firstWhere('host', $ref) ? $ref : null;
+
+        $refLinks = [];
+        if ($host) {
+            $hHostRows = $histByHost->get($host, collect());
+            $aHostRows = $activeByHost->get($host, collect());
+
+            $links = [];
+            foreach ($hHostRows as $hr) {
+                $k = ($hr->referrer_url ?? '') . "\0" . ($hr->host ?? '') . "\0" . ($hr->target_page ?? '');
+                $links[$k] = [
+                    'url'       => (string) ($hr->referrer_url ?: $host),
+                    'host'      => (string) ($hr->host ?? ''),
+                    'page'      => (string) ($hr->target_page ?? '/'),
+                    'visitors'  => (int) $hr->visitors,
+                    'hits'      => (int) $hr->hits,
+                    'last_seen' => $hr->day,
+                ];
+            }
+
+            foreach ($aHostRows as $ar) {
+                $k = ($ar->referrer ?? '') . "\0" . ($ar->host ?? '') . "\0" . ($ar->page ?? '');
+                if (isset($links[$k])) {
+                    $links[$k]['visitors']++;
+                    $links[$k]['hits'] += (int) $ar->hits;
+                    if ($ar->updated_at && (!$links[$k]['last_seen'] || $ar->updated_at > $links[$k]['last_seen'])) {
+                        $links[$k]['last_seen'] = $ar->updated_at;
+                    }
+                } else {
+                    $links[$k] = [
+                        'url'       => (string) $ar->referrer,
+                        'host'      => (string) ($ar->host ?? ''),
+                        'page'      => (string) ($ar->page ?? '/'),
+                        'visitors'  => 1,
+                        'hits'      => (int) $ar->hits,
+                        'last_seen' => $ar->updated_at,
+                    ];
+                }
+            }
+
+            usort($links, fn ($x, $y) => $y['visitors'] <=> $x['visitors']);
+            $refLinks = array_slice(array_values($links), 0, self::REFERRER_LINKS);
+        }
 
         return [
-            'referrers' => $byHost
-                ->map(fn ($rows, $h) => [
-                    'host'     => $h,
-                    'visitors' => $rows->count(),
-                    'hits'     => (int) $rows->sum('hits'),
-                ])
-                ->sortByDesc('visitors')
-                ->take(self::REFERRER_HOSTS)
-                ->values()
-                ->all(),
-            'refHost'  => $host,
-            'refLinks' => $host ? $this->referrerLinks($byHost->get($host)) : [],
+            'referrers' => $rankedHosts,
+            'refHost'   => $host,
+            'refLinks'  => $refLinks,
         ];
     }
 
@@ -423,17 +590,35 @@ class StatisticsController extends Controller
     }
 
     /**
-     * Device / browser mix, parsed from the stored user agents. Bots are counted
-     * but kept out of the device and browser mixes, where they would swamp the
-     * real numbers without meaning anything.
+     * Device / browser mix, parsed from stored summaries and active user agents.
      */
     private function deviceBreakdown(Carbon $since): array
     {
-        $agents = Visitor::where('updated_at', '>=', $since)->pluck('user_agent');
+        $sinceDate = $since->toDateString();
 
         $devices  = [];
         $browsers = [];
         $bots     = 0;
+
+        // 1. From daily_device_summaries
+        $hist = DB::table('daily_device_summaries')
+            ->where('day', '>=', $sinceDate)
+            ->selectRaw('device, browser, is_bot, SUM(visitors) AS visitors')
+            ->groupBy('device', 'browser', 'is_bot')
+            ->get();
+
+        foreach ($hist as $h) {
+            $v = (int) $h->visitors;
+            if ($h->is_bot) {
+                $bots += $v;
+            } else {
+                $devices[$h->device]   = ($devices[$h->device] ?? 0) + $v;
+                $browsers[$h->browser] = ($browsers[$h->browser] ?? 0) + $v;
+            }
+        }
+
+        // 2. From active visitors table
+        $agents = Visitor::where('updated_at', '>=', $since)->pluck('user_agent');
 
         foreach ($agents as $ua) {
             $parsed = UserAgentParser::parse($ua);
@@ -696,10 +881,25 @@ class StatisticsController extends Controller
     /** Views and unique visitors on omrms.com across a day range. */
     private function omrmsViews(string $from, string $to): object
     {
-        return Omrms::onlyHost(DB::table('visitor_page_views'))
+        $hist = Omrms::onlyHost(DB::table('daily_traffic_summaries'))
             ->whereBetween('day', [$from, $to])
+            ->selectRaw('COALESCE(SUM(views), 0) AS views, COALESCE(SUM(uniques), 0) AS uniques')
+            ->first();
+
+        $active = Omrms::onlyHost(DB::table('visitor_page_views'))
+            ->whereBetween('day', [$from, $to])
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('daily_traffic_summaries')
+                    ->whereColumn('daily_traffic_summaries.day', 'visitor_page_views.day');
+            })
             ->selectRaw('COALESCE(SUM(hits), 0) AS views, COUNT(DISTINCT visitor_token) AS uniques')
             ->first();
+
+        return (object) [
+            'views'   => (int) (($hist->views ?? 0) + ($active->views ?? 0)),
+            'uniques' => (int) (($hist->uniques ?? 0) + ($active->uniques ?? 0)),
+        ];
     }
 
     /** Today's reach on omrms.com, against yesterday, plus who is on it right now. */
@@ -730,9 +930,20 @@ class StatisticsController extends Controller
 
         // Every view recorded in the window, on any host — omrms, tanbat, or the
         // pre-host rows. The share is of recorded traffic, not of omrms + tanbat.
-        $siteViews = (int) DB::table('visitor_page_views')
+        $siteViewsHist = (int) DB::table('daily_traffic_summaries')
             ->whereBetween('day', [$sinceDate, $today])
+            ->sum('views');
+
+        $siteViewsActive = (int) DB::table('visitor_page_views')
+            ->whereBetween('day', [$sinceDate, $today])
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('daily_traffic_summaries')
+                    ->whereColumn('daily_traffic_summaries.day', 'visitor_page_views.day');
+            })
             ->sum('hits');
+
+        $siteViews = $siteViewsHist + $siteViewsActive;
 
         $views   = (int) $current->views;
         $uniques = (int) $current->uniques;
@@ -751,20 +962,44 @@ class StatisticsController extends Controller
     /** The omrms.com URLs people actually reached in the window, busiest first. */
     private function omrmsTopPages(string $sinceDate): array
     {
-        return Omrms::onlyHost(DB::table('visitor_page_views'))
+        $histPages = Omrms::onlyHost(DB::table('daily_page_summaries'))
             ->where('day', '>=', $sinceDate)
+            ->selectRaw('path, SUM(views) AS views, SUM(uniques) AS uniques')
+            ->groupBy('path')
+            ->get()
+            ->keyBy('path');
+
+        $activePages = Omrms::onlyHost(DB::table('visitor_page_views'))
+            ->where('day', '>=', $sinceDate)
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('daily_page_summaries')
+                    ->whereColumn('daily_page_summaries.day', 'visitor_page_views.day');
+            })
             ->selectRaw('path, SUM(hits) AS views, COUNT(DISTINCT visitor_token) AS uniques')
             ->groupBy('path')
-            ->orderByDesc('views')
-            ->limit(10)
             ->get()
-            ->map(fn ($r) => [
-                'path'    => (string) $r->path,
-                'url'     => Omrms::CANONICAL_URL . $r->path,
-                'views'   => (int) $r->views,
-                'uniques' => (int) $r->uniques,
-            ])
-            ->all();
+            ->keyBy('path');
+
+        $allPaths = $histPages->keys()->merge($activePages->keys())->unique();
+
+        $merged = [];
+        foreach ($allPaths as $path) {
+            $h = $histPages->get($path);
+            $a = $activePages->get($path);
+            $views = (int) (($h->views ?? 0) + ($a->views ?? 0));
+            $uniques = (int) (($h->uniques ?? 0) + ($a->uniques ?? 0));
+            $merged[] = [
+                'path'    => (string) $path,
+                'url'     => Omrms::CANONICAL_URL . $path,
+                'views'   => $views,
+                'uniques' => $uniques,
+            ];
+        }
+
+        usort($merged, fn ($x, $y) => $y['views'] <=> $x['views']);
+
+        return array_slice($merged, 0, 10);
     }
 
     /**

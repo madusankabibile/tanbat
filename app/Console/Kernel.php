@@ -53,6 +53,13 @@ class Kernel extends ConsoleKernel
             ->everyTenMinutes()
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Aggregate statistical tables into summary tables and purge expired raw rows.
+        // Hourly at :10.
+        $schedule->command('analytics:prune')
+            ->hourlyAt(10)
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
