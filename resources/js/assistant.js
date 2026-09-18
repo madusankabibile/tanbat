@@ -5,7 +5,7 @@
 // book md5 inside a transaction, so two users confirming the same book at
 // the same instant collapse onto one Post.
 
-import { AD_LINK_URL } from './cards.js';
+import { AD_LINK_URL, getAdLinkUrl } from './cards.js';
 
 const APP   = window.__APP__;
 const toast = window.Tanbat.toast;
@@ -178,9 +178,14 @@ function resultItemHTML(r, idx) {
     r.language  ? `<span class="result-tag lang">🌐 ${esc(r.language)}</span>` : '',
   ].filter(Boolean).join('');
 
+  const sponsorUrl = getAdLinkUrl();
+  const coverHtml = sponsorUrl
+    ? `<a class="ri-cover" href="${sponsorUrl}" target="_blank" rel="sponsored noopener">${cover}</a>`
+    : `<div class="ri-cover">${cover}</div>`;
+
   return `
     <div class="result-item" data-index="${idx}" role="button" tabindex="0">
-      <a class="ri-cover" href="${AD_LINK_URL}" target="_blank" rel="sponsored noopener">${cover}</a>
+      ${coverHtml}
       <div class="ri-info">
         <div class="ri-title">${esc(r.title)}</div>
         ${r.author ? `<div class="ri-author">by ${esc(r.author)}</div>` : ''}
@@ -314,9 +319,14 @@ function renderDone(post, viewUrl) {
     b.language  ? `<span class="result-tag lang">${esc(b.language)}</span>`  : '',
   ].filter(Boolean).join('');
 
+  const sponsorUrl = getAdLinkUrl();
+  const doneCoverHtml = sponsorUrl
+    ? `<a class="dc-cover" href="${sponsorUrl}" target="_blank" rel="sponsored noopener">${cover}</a>`
+    : `<div class="dc-cover">${cover}</div>`;
+
   const doneCard = $('#doneCard');
   if (doneCard) doneCard.innerHTML = `
-    <a class="dc-cover" href="${AD_LINK_URL}" target="_blank" rel="sponsored noopener">${cover}</a>
+    ${doneCoverHtml}
     <div class="dc-meta">
       <div class="dc-title">${esc(b.title || post.title || 'Untitled')}</div>
       ${b.author    ? `<div class="dc-author">by ${esc(b.author)}</div>`    : ''}

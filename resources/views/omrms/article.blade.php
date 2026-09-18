@@ -108,11 +108,13 @@
       {!! $half1 !!}
 
       @if($half2 !== '')
-        {{-- Native ad in the middle of the article — mobile only --}}
-        <div class="omr-midad omr-mobile-only">
-          <div class="omr-ad-label">Advertisement</div>
-          @include('omrms.partials.ad-native')
-        </div>
+        @if(\App\Support\AdSpace::isEnabled('omrms_native'))
+          {{-- Native ad in the middle of the article — mobile only --}}
+          <div class="omr-midad omr-mobile-only">
+            <div class="omr-ad-label">Advertisement</div>
+            @include('omrms.partials.ad-native')
+          </div>
+        @endif
 
         {!! $half2 !!}
       @endif
@@ -165,10 +167,12 @@
 
   {{-- ─────────── RIGHT RAIL: AD + STATS + RELATED ─────────── --}}
   <aside class="omr-rail">
+    @if(\App\Support\AdSpace::isEnabled('omrms_sidebar'))
     <div class="omr-ad-wrap">
       <div class="omr-ad-label">Advertisement</div>
       @include('omrms.partials.ad-square')
     </div>
+    @endif
 
     {{-- Statistics card --}}
     <div class="omr-stats">

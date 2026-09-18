@@ -132,10 +132,12 @@
   <aside class="lost-right">
     <div class="sticky top-[88px] space-y-4 right-scroll">
 
+      @if(\App\Support\AdSpace::isEnabled('sidebar'))
       <section class="panel ad-card">
         <span class="ad-tag">Sponsored</span>
         @include('partials.ad-banner')
       </section>
+      @endif
 
       <section class="panel stats-card">
         <div class="panel-head">
@@ -166,10 +168,12 @@
         </div>
       </section>
 
+      @if(\App\Support\AdSpace::isEnabled('sidebar'))
       <section class="panel ad-card">
         <span class="ad-tag">Sponsored</span>
         @include('partials.ad-banner')
       </section>
+      @endif
 
     </div>
   </aside>

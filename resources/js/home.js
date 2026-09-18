@@ -159,9 +159,13 @@ function renderFeed({ append = false } = {}) {
 // (a full re-render on filter change wipes it, so we re-add), never duplicated
 // on append, and carries no data-post-id so it's ignored by impression tracking.
 function ensureFeedAd() {
+  if (typeof window !== 'undefined' && window.__APP__?.ads?.feed?.enabled === false) return;
   const feed = $('#feed');
   if (!feed || feed.querySelector('[data-ad-feed]')) return;
-  feed.insertAdjacentHTML('afterbegin', feedAdCardHTML());
+  const adHtml = feedAdCardHTML();
+  if (adHtml) {
+    feed.insertAdjacentHTML('afterbegin', adHtml);
+  }
 }
 
 // Pick the right copy depending on whether the user has *ever* seen content.

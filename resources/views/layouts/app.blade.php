@@ -95,6 +95,7 @@ body > ins.adsbygoogle{display:block!important;}
 <script defer src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/messenger.js', 'resources/js/share-module.js', 'resources/js/runtime-check.js'])
 @stack('head')
+{!! \App\Support\AdSpace::render('global_head') !!}
 </head>
 <body class="bg-slate-50">
 
@@ -225,6 +226,14 @@ body > ins.adsbygoogle{display:block!important;}
   window.__APP__ = {
     csrf: document.querySelector('meta[name="csrf-token"]').content,
     user: {!! json_encode($userPayload) !!},
+    ads: {
+      sponsorUrl: {!! json_encode(\App\Support\AdSpace::sponsorUrl()) !!},
+      feed: {
+        enabled: {{ \App\Support\AdSpace::isEnabled('feed') ? 'true' : 'false' }},
+        slotKey: {!! json_encode(\App\Support\AdSpace::feedSlotKey()) !!},
+        slotSrc: {!! json_encode(\App\Support\AdSpace::feedSlotSrc()) !!},
+      },
+    },
     urls: {
       base:          {!! json_encode($appBase) !!},
       logout:        {!! json_encode(url('/auth/logout')) !!},
@@ -293,6 +302,8 @@ body > ins.adsbygoogle{display:block!important;}
 @endauth
 
 @stack('scripts')
+
+{!! \App\Support\AdSpace::render('global_footer') !!}
 
 </body>
 </html>

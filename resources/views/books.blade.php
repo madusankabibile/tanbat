@@ -90,9 +90,11 @@
         </section>
 
         {{-- Mobile banner (right rail is hidden below lg). --}}
+        @if(\App\Support\AdSpace::isEnabled('sidebar'))
         <div class="books-ad-mobile lg:hidden">
           <div class="ad-slot">@include('partials.ad-banner')</div>
         </div>
+        @endif
       @else
         <div class="books-empty">
           <div class="be-orb">
@@ -110,7 +112,9 @@
   @guest
     <aside class="books-aside">
       <div class="books-aside-sticky">
+        @if(\App\Support\AdSpace::isEnabled('sidebar'))
         <div class="ad-slot">@include('partials.ad-banner')</div>
+        @endif
 
         <div class="bx-cta">
           <div class="bx-cta-title">Join Tanbat free</div>
@@ -119,7 +123,9 @@
           <a href="{{ url('/') }}" class="bx-cta-link">Sign in</a>
         </div>
 
+        @if(\App\Support\AdSpace::isEnabled('sidebar'))
         <div class="ad-slot">@include('partials.ad-banner')</div>
+        @endif
 
         @include('partials.stat-counter')
       </div>

@@ -132,10 +132,12 @@
     </section>
 
     {{-- ───── Native banner, directly under the description ───── --}}
+    @if(\App\Support\AdSpace::isEnabled('tv_native'))
     <section class="tv-ad-native">
       <span class="tv-ad-tag">Sponsored</span>
       @include('partials.native-banner')
     </section>
+    @endif
 
   </main>
 
@@ -144,10 +146,12 @@
     <div class="tv-aside-sticky">
 
       {{-- Ad space (top of the rail) --}}
+      @if(\App\Support\AdSpace::isEnabled('sidebar'))
       <section class="tv-card tv-ad-card">
         <span class="tv-ad-tag">Sponsored</span>
         @include('partials.ad-banner')
       </section>
+      @endif
 
       {{-- Related channels --}}
       <section class="tv-card">

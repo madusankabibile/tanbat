@@ -342,14 +342,23 @@ function statusCard(p) {
   `;
 }
 
-// Sponsor URL — same one the newsbot CTA uses. Re-used as the click target
-// behind book covers across the wizard, the feed card, the books grid and
-// the /books/{slug} hero.
-export const AD_LINK_URL = 'https://www.effectivecpmnetwork.com/gc1v4hw8?key=b0e0c39593829879ba649d8cb2ef71ad';
-const NEWSBOT_CONTINUE_URL = AD_LINK_URL;
+// Sponsor URL — managed dynamically via Admin › Ad Spaces (sponsor_url).
+// Fallback to default CPM link if not configured.
+export const DEFAULT_AD_LINK_URL = 'https://www.effectivecpmnetwork.com/gc1v4hw8?key=b0e0c39593829879ba649d8cb2ef71ad';
+
+export function getAdLinkUrl() {
+  if (typeof window !== 'undefined' && window.__APP__?.ads && ('sponsorUrl' in window.__APP__.ads)) {
+    return window.__APP__.ads.sponsorUrl || '';
+  }
+  return DEFAULT_AD_LINK_URL;
+}
+
+export const AD_LINK_URL = DEFAULT_AD_LINK_URL;
 
 export function newsbotCtaHTML() {
-  return `<a class="newsbot-continue" href="${NEWSBOT_CONTINUE_URL}" target="_blank" rel="noopener sponsored">Continue reading…</a>`;
+  const url = getAdLinkUrl();
+  if (!url) return '';
+  return `<a class="newsbot-continue" href="${url}" target="_blank" rel="noopener sponsored">Continue reading…</a>`;
 }
 
 /**
@@ -403,16 +412,22 @@ export function bindDownloadCountdown(root = document) {
 
 // Native ad slot used for the ad-bot account's image-type posts. The script tag injects the
 // creative into the matching #container-… element when the card mounts.
-const ADBOT_SLOT_KEY = '36ce0149ae6c36811ff6c54b088c483c';
-const ADBOT_SLOT_SRC = `https://pl23865704.effectivecpmnetwork.com/${ADBOT_SLOT_KEY}/invoke.js`;
+const DEFAULT_ADBOT_SLOT_KEY = '36ce0149ae6c36811ff6c54b088c483c';
+const DEFAULT_ADBOT_SLOT_SRC = `https://pl23865704.effectivecpmnetwork.com/${DEFAULT_ADBOT_SLOT_KEY}/invoke.js`;
+
+export function getFeedSlotKey() {
+  return window.__APP__?.ads?.feed?.slotKey || DEFAULT_ADBOT_SLOT_KEY;
+}
+
+export function getFeedSlotSrc() {
+  return window.__APP__?.ads?.feed?.slotSrc || DEFAULT_ADBOT_SLOT_SRC;
+}
 
 function adbotSlotHTML(postId) {
-  // The ad network's invoke.js targets a fixed container id, so we render
-  // the verbatim div here and hydrate the script tag separately (innerHTML
-  // does not execute injected <script> elements).
+  const slotKey = getFeedSlotKey();
   return `
     <div class="post-media adbot-slot" data-adbot-slot data-post-id="${postId}">
-      <div id="container-${ADBOT_SLOT_KEY}"></div>
+      <div id="container-${slotKey}"></div>
     </div>
   `;
 }
@@ -424,6 +439,7 @@ function adbotSlotHTML(postId) {
 // degrades when over-served.
 export function hydrateAdSlots(root) {
   if (!root) return;
+  if (typeof window !== 'undefined' && window.__APP__?.ads?.feed?.enabled === false) return;
   const slots = root.querySelectorAll?.('[data-adbot-slot]');
   if (!slots || !slots.length) return;
   if (document.getElementById('adbot-invoke')) return;
@@ -431,7 +447,7 @@ export function hydrateAdSlots(root) {
   s.id = 'adbot-invoke';
   s.async = true;
   s.dataset.cfasync = 'false';
-  s.src = ADBOT_SLOT_SRC;
+  s.src = getFeedSlotSrc();
   document.body.appendChild(s);
 }
 
@@ -440,6 +456,7 @@ export function hydrateAdSlots(root) {
 // display slot (the same `container-…` div + invoke.js the ad-bot image posts
 // use, hydrated by hydrateAdSlots). home.js pins one to the top of the feed.
 export function feedAdCardHTML() {
+  if (typeof window !== 'undefined' && window.__APP__?.ads?.feed?.enabled === false) return '';
   return `
     <article class="post-card image-card ad-feed-card" data-ad-feed>
       <div class="post-head">

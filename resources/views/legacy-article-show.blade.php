@@ -204,9 +204,11 @@
     <aside class="lg:col-span-3">
       <div class="sticky top-24 space-y-6">
 
+        @if(\App\Support\AdSpace::isEnabled('sidebar'))
         <div class="ad-slot">
           @include('partials.ad-banner')
         </div>
+        @endif
 
         {{-- Related articles --}}
         <div class="card overflow-hidden">

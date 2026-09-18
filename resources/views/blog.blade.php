@@ -148,10 +148,12 @@
     <div class="sticky top-[88px] space-y-4 right-scroll">
 
       {{-- Ad --}}
+      @if(\App\Support\AdSpace::isEnabled('sidebar'))
       <section class="panel ad-card">
         <span class="ad-tag">Sponsored</span>
         @include('partials.ad-banner')
       </section>
+      @endif
 
       {{-- Popular now (server-rendered) --}}
       @if($trending->isNotEmpty())

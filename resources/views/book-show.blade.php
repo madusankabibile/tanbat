@@ -84,16 +84,27 @@
     </nav>
 
     <article class="bk-hero">
-      <a class="bk-hero-cover"
-         href="https://www.effectivecpmnetwork.com/gc1v4hw8?key=b0e0c39593829879ba649d8cb2ef71ad"
-         target="_blank" rel="sponsored noopener">
+      @php
+        $bkSponsorUrl = \App\Support\AdSpace::sponsorUrl();
+      @endphp
+      @if($bkSponsorUrl)
+        <a class="bk-hero-cover"
+           href="{{ $bkSponsorUrl }}"
+           target="_blank" rel="sponsored noopener">
+      @else
+        <div class="bk-hero-cover">
+      @endif
         @if($coverUrl)
           <img src="{{ $coverUrl }}" alt="" referrerpolicy="no-referrer"
                onerror="this.replaceWith(Object.assign(document.createElement('span'), { className:'noimg', textContent:'No cover' }))">
         @else
           <span class="noimg">No cover</span>
         @endif
-      </a>
+      @if($bkSponsorUrl)
+        </a>
+      @else
+        </div>
+      @endif
 
       <div class="bk-hero-meta">
         <span class="bk-badge">Book</span>
@@ -157,9 +168,11 @@
     {{-- Mobile/tablet ad — the right rail is hidden below lg, so guests on
          small screens still see a banner in the main flow. --}}
     @guest
+      @if(\App\Support\AdSpace::isEnabled('sidebar'))
       <div class="bk-ad-mobile lg:hidden">
         <div class="ad-slot">@include('partials.ad-banner')</div>
       </div>
+      @endif
     @endguest
 
     @guest
@@ -308,7 +321,9 @@
     <aside class="book-aside">
       <div class="book-aside-sticky">
         {{-- 300×250 network banner --}}
+        @if(\App\Support\AdSpace::isEnabled('sidebar'))
         <div class="ad-slot">@include('partials.ad-banner')</div>
+        @endif
 
         {{-- Sign-in promo --}}
         <div class="bk-side-cta">
@@ -319,7 +334,9 @@
         </div>
 
         {{-- Secondary banner --}}
+        @if(\App\Support\AdSpace::isEnabled('sidebar'))
         <div class="ad-slot">@include('partials.ad-banner')</div>
+        @endif
 
         {{-- Visitor stats (bottom of rail) --}}
         @include('partials.stat-counter')

@@ -264,6 +264,7 @@
     .omr-cta:hover{background:var(--brand-ink)}
     .omr-doc a.inline{color:var(--brand-ink);text-decoration:underline}
   </style>
+  {!! \App\Support\AdSpace::render('global_head') !!}
 </head>
 <body>
   @php $omr = \App\Support\Omrms::class; @endphp
@@ -352,5 +353,6 @@
       form.addEventListener('submit', function () { if (!input.value.trim()) return false; });
     })();
   </script>
+  {!! \App\Support\AdSpace::render('global_footer') !!}
 </body>
 </html>

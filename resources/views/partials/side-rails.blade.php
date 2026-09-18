@@ -110,10 +110,12 @@
   <div class="sticky top-[88px] space-y-4 right-scroll">
 
     {{-- Advertisement square --}}
+    @if(\App\Support\AdSpace::isEnabled('sidebar'))
     <section class="panel ad-card">
       <span class="ad-tag">Sponsored</span>
       @include('partials.ad-banner')
     </section>
+    @endif
 
     {{-- Recent visitors (custom widget — replaces SuperCounters) --}}
     @include('partials.stat-counter')

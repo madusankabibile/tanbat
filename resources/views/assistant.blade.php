@@ -11,14 +11,16 @@
 <div class="assistant-shell mx-auto w-full max-w-[1480px] px-3 py-5 sm:px-5 lg:px-6">
 
   {{-- ─────────── LEFT AD RAIL ─────────── --}}
+  @if(\App\Support\AdSpace::isEnabled('assistant'))
   <aside class="assist-rail assist-rail--left">
     <div class="assist-rail-sticky">
       <section class="assist-ad">
         <span class="assist-ad-tag">Sponsored</span>
-        @include('partials.ad-banner')
+        @include('partials.ad-banner', ['placement' => 'assistant'])
       </section>
     </div>
   </aside>
+  @endif
 
   <main class="assistant-main">
 
@@ -194,10 +196,12 @@
   {{-- ─────────── RIGHT AD RAIL ─────────── --}}
   <aside class="assist-rail assist-rail--right">
     <div class="assist-rail-sticky">
+      @if(\App\Support\AdSpace::isEnabled('assistant'))
       <section class="assist-ad">
         <span class="assist-ad-tag">Sponsored</span>
-        @include('partials.ad-banner')
+        @include('partials.ad-banner', ['placement' => 'assistant'])
       </section>
+      @endif
       @include('partials.stat-counter')
     </div>
   </aside>

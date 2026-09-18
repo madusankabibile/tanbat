@@ -405,7 +405,9 @@
     {{-- ─────────── RIGHT RAIL ─────────── --}}
     <aside class="lg:col-span-3">
       <div class="sticky top-24 space-y-6">
+        @if(\App\Support\AdSpace::isEnabled('sidebar'))
         <div class="ad-slot">@include('partials.ad-banner')</div>
+        @endif
 
         <div class="card overflow-hidden">
           <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">

@@ -5,9 +5,23 @@
 
 @section('content')
 
-<div class="mb-4 flex items-center justify-between">
-  <p class="text-sm text-slate-600">Manage the ads served across the site — placements, schedule, weight, and live click/impression stats.</p>
-  <a href="{{ route('admin.ads.create') }}" class="btn-primary">+ New advertisement</a>
+{{-- ─────────── TAB NAVIGATION ─────────── --}}
+<div class="mb-5 flex border-b border-slate-200">
+  <a href="{{ route('admin.ad-spaces.index') }}"
+     class="border-b-2 border-transparent px-4 py-2.5 text-sm font-semibold text-slate-500 hover:border-slate-300 hover:text-slate-700">
+    Ad Spaces (Placements)
+  </a>
+  <a href="{{ route('admin.ads.index') }}"
+     class="border-b-2 border-brand-600 px-4 py-2.5 text-sm font-bold text-brand-600">
+    Direct Campaigns
+  </a>
+</div>
+
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <p class="text-sm text-slate-600">Create and track custom uploaded banners. To display these banners in any slot on the site, go to <a href="{{ route('admin.ad-spaces.index') }}" class="font-bold text-brand-600 underline">Ad Spaces</a> and set the space source to <em>Direct Campaign Banner</em>.</p>
+  </div>
+  <a href="{{ route('admin.ads.create') }}" class="btn-primary">+ New campaign</a>
 </div>
 
 <form method="GET" class="mb-4 card flex flex-wrap items-end gap-3 p-4">

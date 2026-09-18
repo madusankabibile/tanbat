@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AdSpaceController as AdminAdSpaceController;
 use App\Http\Controllers\Admin\AdvertisementController as AdminAdvertisementController;
+use App\Http\Controllers\AdvertisementClickController;
 use App\Http\Controllers\Admin\BookController as AdminBookController;
 use App\Http\Controllers\Admin\BookRssController as AdminBookRssController;
 use App\Http\Controllers\Admin\BookSearchController as AdminBookSearchController;
@@ -92,6 +94,10 @@ Route::get('/posts/{type}/{post}', [PageController::class, 'postShow'])
 Route::get('/read-blog/{slug}', [\App\Http\Controllers\ReadBlogController::class, 'show'])
     ->where('slug', '[0-9].*')
     ->name('read-blog');
+// Direct ad campaign click tracking & redirect
+Route::get('/ads/{ad}/click', [AdvertisementClickController::class, 'click'])
+    ->whereNumber('ad')
+    ->name('ad.click');
 // Old WoWonder photo-album permalink /albums/{username}. Forwards to the
 // member's photos tab, or shows the "account deleted" recovery page if they're
 // gone. See App\Http\Controllers\UserController::albums.
@@ -338,7 +344,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
     Route::post('book-rss/toggle',      [AdminBookRssController::class, 'toggle'])->name('book-rss.toggle');
     Route::post('book-rss/import',      [AdminBookRssController::class, 'import'])->name('book-rss.import');
 
-    // Advertisements
+    // Ad Spaces (placements & codes)
+    Route::get('ad-spaces',            [AdminAdSpaceController::class, 'index'])->name('ad-spaces.index');
+    Route::put('ad-spaces',            [AdminAdSpaceController::class, 'update'])->name('ad-spaces.update');
+    Route::post('ad-spaces/reset',     [AdminAdSpaceController::class, 'reset'])->name('ad-spaces.reset');
+
+    // Advertisements (direct campaigns)
     Route::get('ads',                  [AdminAdvertisementController::class, 'index'])->name('ads.index');
     Route::get('ads/create',           [AdminAdvertisementController::class, 'create'])->name('ads.create');
     Route::post('ads',                 [AdminAdvertisementController::class, 'store'])->name('ads.store');
