@@ -310,9 +310,9 @@ class AnalyticsAggregator
              FROM article_country_views
              WHERE last_viewed_at < ? OR (last_viewed_at IS NULL AND updated_at < ?)
              ON DUPLICATE KEY UPDATE
-                 views = views + VALUES(views),
-                 last_viewed_at = COALESCE(VALUES(last_viewed_at), article_country_view_summaries.last_viewed_at),
-                 archived_at = VALUES(archived_at)',
+                 article_country_view_summaries.views = article_country_view_summaries.views + VALUES(views),
+                 article_country_view_summaries.last_viewed_at = COALESCE(VALUES(last_viewed_at), article_country_view_summaries.last_viewed_at),
+                 article_country_view_summaries.archived_at = VALUES(archived_at)',
             [$now, $cutoff, $cutoff]
         );
 

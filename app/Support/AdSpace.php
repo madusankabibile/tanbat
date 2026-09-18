@@ -96,8 +96,8 @@ class AdSpace
             'group_label' => 'Tanbat Placements',
             'locations'   => 'Click-through link behind book covers on /books/{slug} and the "Continue reading…" button on newsbot cards',
             'type'        => 'url',
-            'default_enabled' => true,
-            'default_url'     => 'https://www.effectivecpmnetwork.com/gc1v4hw8?key=b0e0c39593829879ba649d8cb2ef71ad',
+            'default_enabled' => false,
+            'default_url'     => '',
         ],
 
         'assistant' => [
@@ -296,6 +296,11 @@ class AdSpace
             return self::render('sidebar');
         }
 
+        // Global head and footer scripts run directly in document context
+        if ($space === 'global_head' || $space === 'global_footer') {
+            return new HtmlString(self::code($space));
+        }
+
         $mode = self::mode($space);
 
         // Direct campaign mode
@@ -308,17 +313,53 @@ class AdSpace
         if ($mode === 'auto') {
             $code = trim(self::code($space));
             if ($code !== '') {
-                return new HtmlString($code);
+                return new HtmlString(self::sandbox($code, $space));
             }
             $campHtml = self::renderCampaign($space === 'assistant' ? 'assistant' : 'sidebar');
             if ($campHtml) {
                 return $campHtml;
             }
-            return new HtmlString(self::SPACES[$space]['default_code'] ?? '');
+            $default = self::SPACES[$space]['default_code'] ?? '';
+            return new HtmlString(self::sandbox($default, $space));
         }
 
         // Default 'code' mode
-        return new HtmlString(self::code($space));
+        return new HtmlString(self::sandbox(self::code($space), $space));
+    }
+
+    /**
+     * Wrap display ad code in an isolated sandboxed iframe.
+     * Prevents third-party ad networks from listening to clicks on host buttons
+     * or hijacking the browser's Back button history.
+     */
+    public static function sandbox(string $code, string $space = 'sidebar'): string
+    {
+        $code = trim($code);
+        if ($code === '') {
+            return '';
+        }
+
+        // Global head/footer tags (e.g. analytics, meta) must remain in the main document context
+        if (in_array($space, ['global_head', 'global_footer'], true)) {
+            return $code;
+        }
+
+        $isSquare = in_array($space, ['sidebar', 'omrms_sidebar', 'assistant'], true);
+        $heightStyle = $isSquare ? 'min-height:250px;height:250px;' : 'min-height:90px;';
+        $maxWidthStyle = $isSquare ? 'max-width:300px;' : 'max-width:100%;';
+
+        $doc = '<!DOCTYPE html><html><head><meta charset="utf-8">' .
+            '<style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;overflow:hidden;}</style>' .
+            '</head><body>' . $code . '</body></html>';
+
+        $escapedDoc = htmlspecialchars($doc, ENT_QUOTES, 'UTF-8');
+
+        return '<div class="ad-sandboxed-wrap ad-space-' . e($space) . '" style="width:100%;' . $maxWidthStyle . 'margin:0 auto;display:flex;justify-content:center;align-items:center;overflow:hidden;">' .
+            '<iframe sandbox="allow-scripts allow-same-origin allow-popups" ' .
+            'srcdoc="' . $escapedDoc . '" ' .
+            'style="width:100%;' . $heightStyle . 'border:none;overflow:hidden;display:block;" ' .
+            'scrolling="no" loading="lazy"></iframe>' .
+            '</div>';
     }
 
     /**

@@ -3,8 +3,8 @@
     "file": "assets/banners-C6x9FQL1.js",
     "name": "banners"
   },
-  "_cards-RbuKS-li.js": {
-    "file": "assets/cards-RbuKS-li.js",
+  "_cards-6tOWTwxI.js": {
+    "file": "assets/cards-6tOWTwxI.js",
     "name": "cards"
   },
   "resources/css/app.css": {
@@ -25,12 +25,12 @@
     "isEntry": true
   },
   "resources/js/assistant.js": {
-    "file": "assets/assistant-BsFxFIgH.js",
+    "file": "assets/assistant-CTDbqZ0w.js",
     "name": "assistant",
     "src": "resources/js/assistant.js",
     "isEntry": true,
     "imports": [
-      "_cards-RbuKS-li.js"
+      "_cards-6tOWTwxI.js"
     ]
   },
   "resources/js/blog.js": {
@@ -40,12 +40,12 @@
     "isEntry": true
   },
   "resources/js/book-show.js": {
-    "file": "assets/book-show-ovYqSS6k.js",
+    "file": "assets/book-show-BhoiuKFh.js",
     "name": "book-show",
     "src": "resources/js/book-show.js",
     "isEntry": true,
     "imports": [
-      "_cards-RbuKS-li.js"
+      "_cards-6tOWTwxI.js"
     ]
   },
   "resources/js/books.js": {
@@ -55,12 +55,12 @@
     "isEntry": true
   },
   "resources/js/home.js": {
-    "file": "assets/home-BRiGe3Xn.js",
+    "file": "assets/home-hFikVb4D.js",
     "name": "home",
     "src": "resources/js/home.js",
     "isEntry": true,
     "imports": [
-      "_cards-RbuKS-li.js"
+      "_cards-6tOWTwxI.js"
     ]
   },
   "resources/js/messenger.js": {
@@ -79,12 +79,12 @@
     ]
   },
   "resources/js/profile.js": {
-    "file": "assets/profile-DzHXl7Wq.js",
+    "file": "assets/profile-B4ed14dV.js",
     "name": "profile",
     "src": "resources/js/profile.js",
     "isEntry": true,
     "imports": [
-      "_cards-RbuKS-li.js",
+      "_cards-6tOWTwxI.js",
       "_banners-C6x9FQL1.js"
     ]
   },
@@ -119,12 +119,12 @@
     "isEntry": true
   },
   "resources/js/user-deleted.js": {
-    "file": "assets/user-deleted-VXWh9RIp.js",
+    "file": "assets/user-deleted-bwDvsZIb.js",
     "name": "user-deleted",
     "src": "resources/js/user-deleted.js",
     "isEntry": true,
     "imports": [
-      "_cards-RbuKS-li.js"
+      "_cards-6tOWTwxI.js"
     ]
   }
 }

@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  @include('partials.ad-shield')
   <title>@yield('title', 'OMRMS')</title>
 
   {{-- Per-page SEO (canonical, robots, description, Open Graph, Twitter,

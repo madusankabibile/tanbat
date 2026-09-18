@@ -343,17 +343,17 @@ function statusCard(p) {
 }
 
 // Sponsor URL — managed dynamically via Admin › Ad Spaces (sponsor_url).
-// Fallback to default CPM link if not configured.
-export const DEFAULT_AD_LINK_URL = 'https://www.effectivecpmnetwork.com/gc1v4hw8?key=b0e0c39593829879ba649d8cb2ef71ad';
+// Default is empty so no automatic redirect ads are triggered unless explicitly configured.
+export const DEFAULT_AD_LINK_URL = '';
 
 export function getAdLinkUrl() {
   if (typeof window !== 'undefined' && window.__APP__?.ads && ('sponsorUrl' in window.__APP__.ads)) {
     return window.__APP__.ads.sponsorUrl || '';
   }
-  return DEFAULT_AD_LINK_URL;
+  return '';
 }
 
-export const AD_LINK_URL = DEFAULT_AD_LINK_URL;
+export const AD_LINK_URL = '';
 
 export function newsbotCtaHTML() {
   const url = getAdLinkUrl();
@@ -432,23 +432,37 @@ function adbotSlotHTML(postId) {
   `;
 }
 
-// Walk a root element for any adbot slots and inject a real <script> so the
-// browser actually fetches invoke.js. The ad network only fills one container
-// per page load, so we add the script once globally even if multiple slots
-// render — duplicate slots just stay empty, matching how every ad network
-// degrades when over-served.
+// Walk a root element for any adbot slots and render them inside sandboxed
+// iframes. Sandboxing isolates third-party ad scripts so they cannot attach
+// click interceptors to the host document or hijack the browser Back button.
 export function hydrateAdSlots(root) {
   if (!root) return;
   if (typeof window !== 'undefined' && window.__APP__?.ads?.feed?.enabled === false) return;
   const slots = root.querySelectorAll?.('[data-adbot-slot]');
   if (!slots || !slots.length) return;
-  if (document.getElementById('adbot-invoke')) return;
-  const s = document.createElement('script');
-  s.id = 'adbot-invoke';
-  s.async = true;
-  s.dataset.cfasync = 'false';
-  s.src = getFeedSlotSrc();
-  document.body.appendChild(s);
+
+  const slotKey = getFeedSlotKey();
+  const slotSrc = getFeedSlotSrc();
+
+  slots.forEach((slot) => {
+    if (slot.dataset.adHydrated) return;
+    slot.dataset.adHydrated = '1';
+
+    const iframe = document.createElement('iframe');
+    iframe.sandbox = 'allow-scripts allow-same-origin allow-popups';
+    iframe.style.border = 'none';
+    iframe.style.width = '100%';
+    iframe.style.minHeight = '250px';
+    iframe.style.overflow = 'hidden';
+    iframe.scrolling = 'no';
+    iframe.loading = 'lazy';
+
+    const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;overflow:hidden;}</style></head><body><div id="container-${slotKey}"></div><script async data-cfasync="false" src="${slotSrc}"><\/script></body></html>`;
+    iframe.srcdoc = doc;
+
+    slot.innerHTML = '';
+    slot.appendChild(iframe);
+  });
 }
 
 // A feed-native sponsored card. Renders like a regular image post — post-card

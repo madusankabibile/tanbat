@@ -35,31 +35,28 @@
   var wrap = document.createElement('div');
   wrap.className = 'mid-article-ad';
 
-  if (customHtml && customHtml.trim() !== '') {
-    wrap.innerHTML = customHtml;
-    // Execute any script elements inside customHtml
-    var scripts = wrap.getElementsByTagName('script');
-    for (var i = 0; i < scripts.length; i++) {
-      var s = document.createElement('script');
-      if (scripts[i].src) {
-        s.src = scripts[i].src;
-      } else {
-        s.textContent = scripts[i].textContent;
-      }
-      document.body.appendChild(s);
-    }
-  } else {
-    var container = document.createElement('div');
-    container.id = containerId;
-    wrap.appendChild(container);
+  var iframe = document.createElement('iframe');
+  iframe.sandbox = 'allow-scripts allow-same-origin allow-popups';
+  iframe.style.border = 'none';
+  iframe.style.width = '100%';
+  iframe.style.minHeight = '70px';
+  iframe.style.overflow = 'hidden';
+  iframe.scrolling = 'no';
+  iframe.loading = 'lazy';
 
-    if (scriptUrl) {
-      var s = document.createElement('script');
-      s.async = true;
-      s.setAttribute('data-cfasync', 'false');
-      s.src = scriptUrl;
-      wrap.appendChild(s);
-    }
+  var innerContent = '';
+  if (customHtml && customHtml.trim() !== '') {
+    innerContent = customHtml;
+  } else if (containerId && scriptUrl) {
+    innerContent = '<div id="' + containerId + '"></div>' +
+      '<script async data-cfasync="false" src="' + scriptUrl + '"><\/script>';
+  }
+
+  if (innerContent) {
+    iframe.srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+      '<style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;overflow:hidden;}</style>' +
+      '</head><body>' + innerContent + '</body></html>';
+    wrap.appendChild(iframe);
   }
 
   anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
