@@ -166,7 +166,7 @@ function showEmpty() {
 
 function resultItemHTML(r, idx) {
   const cover = r.cover
-    ? `<img src="${esc(r.cover)}" alt="" referrerpolicy="no-referrer"
+    ? `<img src="${esc(r.cover)}" alt=""
            onerror="this.replaceWith(Object.assign(document.createElement('span'), { className:'noimg', textContent:'No cover' }))">`
     : `<span class="noimg">No cover</span>`;
 
@@ -309,7 +309,7 @@ async function confirmSelection(index) {
 function renderDone(post, viewUrl) {
   const b = post?.book || {};
   const cover = b.cover_url
-    ? `<img src="${esc(b.cover_url)}" alt="" referrerpolicy="no-referrer">`
+    ? `<img src="${esc(b.cover_url)}" alt="">`
     : `<span class="noimg">No cover</span>`;
   const tags = [
     b.extension ? `<span class="result-tag ext">${esc(b.extension)}</span>` : '',

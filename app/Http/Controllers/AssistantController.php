@@ -211,6 +211,76 @@ class AssistantController
         return response()->json($payload);
     }
 
+    /**
+     * GET /api/assistant/cover?url=...
+     *
+     * Local caching image proxy for external book covers.
+     * Prevents hotlinking blocks, CORS issues, browser 0-byte referer blocks,
+     * and adblocker/ISP interference on book cover images.
+     */
+    public function coverProxy(Request $request)
+    {
+        $url = trim((string) $request->query('url', ''));
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            abort(404);
+        }
+
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $allowed = [
+            'libgen.li', 'libgen.is', 'libgen.rs', 'libgen.st',
+            'annas-archive.gl', 'annas-archive.gd', 'annas-archive.pk', 'annas-archive.org',
+            'z-library.sk', 'openlibrary.org', 'covers.openlibrary.org',
+        ];
+        $isAllowed = false;
+        foreach ($allowed as $a) {
+            if ($host === $a || str_ends_with($host, '.' . $a)) {
+                $isAllowed = true;
+                break;
+            }
+        }
+        if (!$isAllowed) {
+            abort(403, 'Forbidden domain');
+        }
+
+        $cacheKey = 'assistant:cover:' . sha1($url);
+        $cached = Cache::remember($cacheKey, now()->addDays(7), function () use ($url, $host) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS      => 5,
+                CURLOPT_TIMEOUT        => 8,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
+                CURLOPT_REFERER        => 'https://' . $host . '/',
+                CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+                CURLOPT_HTTPHEADER     => [
+                    'Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                ],
+            ]);
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+
+            if ($code === 200 && $body !== false && strlen($body) > 60) {
+                return [
+                    'body' => base64_encode($body),
+                    'type' => $type ?: 'image/jpeg',
+                ];
+            }
+            return null;
+        });
+
+        if (!$cached || empty($cached['body'])) {
+            abort(404);
+        }
+
+        return response(base64_decode($cached['body']))
+            ->header('Content-Type', $cached['type'])
+            ->header('Cache-Control', 'public, max-age=604800, immutable');
+    }
+
     /** How long a "confirm" sits in the queue before the post is created. */
     public const PREPARATION_SECONDS = 120;
 
@@ -569,10 +639,18 @@ class AssistantController
             ];
         }
 
-        // Strip results without an md5 (we can't dedup or build a post for those)
-        // and cap to the first 25 so the wizard doesn't churn through a huge list.
+        // Strip results without an md5 (we can't dedup or build a post for those),
+        // route covers through our local caching proxy so browsers never encounter
+        // referrer/hotlinking blocks, CORS, or adblocker issues, and cap to 25.
         $results = collect($raw)
             ->filter(fn ($r) => !empty($r['md5']) && !empty($r['title']))
+            ->map(function ($r) {
+                if (!empty($r['cover']) && filter_var($r['cover'], FILTER_VALIDATE_URL)) {
+                    $r['raw_cover'] = $r['cover'];
+                    $r['cover']     = url('/api/assistant/cover?url=' . urlencode($r['cover']));
+                }
+                return $r;
+            })
             ->take(25)
             ->values()
             ->all();

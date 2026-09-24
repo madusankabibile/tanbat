@@ -133,6 +133,7 @@ Route::get('/blog-category/{category}', [\App\Http\Controllers\BlogController::c
 Route::get('/discover/people',   [PeopleController::class, 'page'])->name('people');
 Route::get('/users/feed.xml',    [UserFeedController::class, 'rss'])->name('users.feed');
 Route::get('/assistant',         [AssistantController::class, 'page'])->name('assistant');
+Route::get('/assistant/cover',   [AssistantController::class, 'coverProxy']);
 Route::get('/books',             [AssistantController::class, 'booksPage'])->name('books');
 // Public RSS feed of latest books — Pinterest auto-publish source. Declared
 // BEFORE the {slug} route so "feed.xml" isn't swallowed as a book slug.
@@ -195,6 +196,7 @@ Route::prefix('api')->group(function () {
     // queue a book request; guest requests are attributed to a shared anonymous
     // system account (see AssistantController::requestUserId).
     Route::get('/assistant/search', [AssistantController::class, 'search']);
+    Route::get('/assistant/cover',  [AssistantController::class, 'coverProxy'])->name('assistant.cover');
     Route::post('/assistant/confirm', [AssistantController::class, 'confirm']);
     Route::get('/assistant/status',   [AssistantController::class, 'status']);
     Route::get('/posts',      [PostController::class, 'index']);
