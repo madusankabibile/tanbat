@@ -104,8 +104,11 @@ if (!function_exists('fetch_libgen_url')) {
     }
 }
 
-/** Crawl Library Genesis for $req / $page. Returns [results[], status, error, url]. */
-function crawl_libgen($req, $page, $base)
+/**
+ * Crawl a single page of Library Genesis for $req / $page.
+ * Returns [results[], status, error, url].
+ */
+function crawl_libgen_page($req, $page, $base)
 {
     $base = rtrim($base, '/');
     $url  = $base . '/index.php?req=' . rawurlencode($req) . '&covers=on&res=25';
@@ -131,7 +134,8 @@ function crawl_libgen($req, $page, $base)
     for ($i = 1; $i < $rows->length; $i++) {
         $tr = $rows->item($i);
         $tds = $xp->query('./td', $tr);
-        if ($tds->length < 9) {
+        $numCols = $tds->length;
+        if ($numCols < 8) {
             continue;
         }
 
@@ -147,16 +151,18 @@ function crawl_libgen($req, $page, $base)
             }
         }
 
-        $offset = $hasCoverCol ? 1 : 0;
-        $titleTd     = $tds->item($offset);
-        $authorTd    = $tds->item($offset + 1);
-        $publisherTd = $tds->item($offset + 2);
-        $yearTd      = $tds->item($offset + 3);
-        $languageTd  = $tds->item($offset + 4);
-        $pagesTd     = $tds->item($offset + 5);
-        $sizeTd      = $tds->item($offset + 6);
-        $extTd       = $tds->item($offset + 7);
-        $mirrorsTd   = $tds->item($offset + 8);
+        $titleCol    = $hasCoverCol ? 1 : 0;
+        $titleTd     = $tds->item($titleCol);
+        $authorTd    = $titleCol + 1 < $numCols ? $tds->item($titleCol + 1) : null;
+        $publisherTd = $titleCol + 2 < $numCols ? $tds->item($titleCol + 2) : null;
+
+        // Index metadata columns relative to the end so layout variations don't break extraction
+        $mirrorsTd   = $tds->item($numCols - 1);
+        $extTd       = $numCols >= 2 ? $tds->item($numCols - 2) : null;
+        $sizeTd      = $numCols >= 3 ? $tds->item($numCols - 3) : null;
+        $pagesTd     = $numCols >= 4 ? $tds->item($numCols - 4) : null;
+        $languageTd  = $numCols >= 5 ? $tds->item($numCols - 5) : null;
+        $yearTd      = $numCols >= 6 ? $tds->item($numCols - 6) : null;
 
         // Title: extract from edition.php link, or the primary text block
         $titleAnchor = $xp->query('.//a[contains(@href,"edition.php") or contains(@href,"book/")]', $titleTd)->item(0);
@@ -214,6 +220,61 @@ function crawl_libgen($req, $page, $base)
             'type'      => 'Book',
             'md5'       => $md5,
         ];
+    }
+
+    return [$results, $status, null, $url];
+}
+
+/**
+ * Crawl Library Genesis for $req / $page with smart query relaxation.
+ * If a multi-word or punctuated query yields 0 results on page 1,
+ * it tries clean title & stop-word variations before giving up.
+ * Returns [results[], status, error, url].
+ */
+function crawl_libgen($req, $page, $base)
+{
+    list($results, $status, $error, $url) = crawl_libgen_page($req, $page, $base);
+
+    // If matches found, or it's a pagination request, or an HTTP error occurred, return as-is
+    if (!empty($results) || $page > 1 || $error !== null) {
+        return [$results, $status, $error, $url];
+    }
+
+    // Smart relaxation for long or formatted queries that yielded 0 matches
+    $raw = trim($req);
+    $candidates = [];
+
+    // 1. If there's a colon or dash separating title and subtitle (e.g. "Clean Code: A Handbook..."),
+    // try the main title part before the separator.
+    if (preg_match('/^([^:\-–—]+)[:\-–—](.+)$/u', $raw, $m)) {
+        $before = trim($m[1]);
+        if (mb_strlen($before) >= 3 && mb_strtolower($before) !== mb_strtolower($raw)) {
+            $candidates[] = $before;
+        }
+    }
+
+    // 2. Remove common English stop words if the query has 3 or more words
+    $words = preg_split('/\s+/u', $raw);
+    if (count($words) >= 3) {
+        $stopWords = ['a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'as', 'into', 'about'];
+        $cleanWords = array_values(array_filter($words, function ($w) use ($stopWords) {
+            $clean = mb_strtolower(trim($w, ".,:;\"'?!()[]{}"));
+            return !in_array($clean, $stopWords, true);
+        }));
+
+        if (count($cleanWords) >= 2 && count($cleanWords) < count($words)) {
+            $candidate = implode(' ', $cleanWords);
+            if ($candidate !== $raw && !in_array($candidate, $candidates, true)) {
+                $candidates[] = $candidate;
+            }
+        }
+    }
+
+    foreach ($candidates as $cand) {
+        list($candResults, $candStatus, $candError) = crawl_libgen_page($cand, 1, $base);
+        if (!empty($candResults)) {
+            return [$candResults, $candStatus, null, $url];
+        }
     }
 
     return [$results, $status, null, $url];

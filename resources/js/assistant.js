@@ -127,9 +127,13 @@ async function runSearch() {
       showEmpty();
       return;
     }
-    // Prefer results with covers, but keep all matches so users always see search hits.
-    const withCovers = (res.results || []).filter((r) => r.cover && String(r.cover).trim() !== '');
-    state.results = withCovers.length > 0 ? withCovers : (res.results || []);
+    // Sort results with covers first, but preserve all matches so users always see search hits.
+    const allResults = res.results || [];
+    state.results = allResults.slice().sort((a, b) => {
+      const aHas = Boolean(a.cover && String(a.cover).trim() !== '');
+      const bHas = Boolean(b.cover && String(b.cover).trim() !== '');
+      return (bHas ? 1 : 0) - (aHas ? 1 : 0);
+    });
     state.page = 0;
     hideResultsLoading();
     if (!state.results.length) {

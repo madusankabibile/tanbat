@@ -208,6 +208,11 @@ class AssistantController
             return $this->scrapeBooks($query, $request);
         });
 
+        // Do not cache error responses so transient glitches don't lock users out
+        if (!($payload['ok'] ?? false)) {
+            Cache::forget($cacheKey);
+        }
+
         return response()->json($payload);
     }
 
@@ -672,7 +677,7 @@ class AssistantController
         if (!function_exists('crawl_libgen')) return null;
 
         [$raw, $status, $error, $source] = crawl_libgen($query, 1, $domain);
-        if ($error !== null || empty($raw)) return null;
+        if ($error !== null) return null;
 
         return collect($raw ?: [])->map(function ($r) {
             $r['_engine'] = 'libgen';
