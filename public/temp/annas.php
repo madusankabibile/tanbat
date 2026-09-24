@@ -27,71 +27,78 @@ if (!defined('ANNAS_LIBRARY_ONLY')) {
 }
 
 // ---- Fetch -----------------------------------------------------------------
-function fetch_url($url)
-{
-    if (function_exists('curl_init')) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT        => 40,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_ENCODING       => '', // accept gzip/deflate
-            CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                                    . 'AppleWebKit/537.36 (KHTML, like Gecko) '
-                                    . 'Chrome/124.0 Safari/537.36',
-            CURLOPT_HTTPHEADER     => ['Accept-Language: en-US,en;q=0.9'],
-        ]);
-        $body = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err  = curl_error($ch);
-        curl_close($ch);
-        if ($body === false) {
-            return [null, 0, $err];
+if (!function_exists('fetch_url')) {
+    function fetch_url($url)
+    {
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT        => 40,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
+                CURLOPT_COOKIEFILE     => '', // Enable in-memory cookie engine
+                CURLOPT_ENCODING       => '', // accept gzip/deflate
+                CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                                        . 'AppleWebKit/537.36 (KHTML, like Gecko) '
+                                        . 'Chrome/124.0 Safari/537.36',
+                CURLOPT_HTTPHEADER     => ['Accept-Language: en-US,en;q=0.9'],
+            ]);
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err  = curl_error($ch);
+            curl_close($ch);
+            if ($body === false) {
+                return [null, 0, $err];
+            }
+            return [$body, $code, null];
         }
-        return [$body, $code, null];
-    }
 
-    $ctx = stream_context_create([
-        'http' => [
-            'timeout' => 40,
-            'header'  => "User-Agent: Mozilla/5.0\r\nAccept-Language: en-US,en;q=0.9\r\n",
-        ],
-        'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false],
-    ]);
-    $body = @file_get_contents($url, false, $ctx);
-    if ($body === false) {
-        return [null, 0, 'file_get_contents failed'];
+        $ctx = stream_context_create([
+            'http' => [
+                'timeout' => 40,
+                'header'  => "User-Agent: Mozilla/5.0\r\nAccept-Language: en-US,en;q=0.9\r\n",
+            ],
+            'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false],
+        ]);
+        $body = @file_get_contents($url, false, $ctx);
+        if ($body === false) {
+            return [null, 0, 'file_get_contents failed'];
+        }
+        return [$body, 200, null];
     }
-    return [$body, 200, null];
 }
 
 // ---- Helpers ---------------------------------------------------------------
-function clean_text($node)
-{
-    if ($node === null) {
-        return '';
+if (!function_exists('clean_text')) {
+    function clean_text($node)
+    {
+        if ($node === null) {
+            return '';
+        }
+        $text = $node instanceof DOMNode ? $node->textContent : (string) $node;
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/\s+/u', ' ', $text);
+        return trim($text);
     }
-    $text = $node instanceof DOMNode ? $node->textContent : (string) $node;
-    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    $text = preg_replace('/\s+/u', ' ', $text);
-    return trim($text);
 }
 
-function abs_url($href, $base)
-{
-    $href = trim($href);
-    if ($href === '') {
-        return '';
+if (!function_exists('abs_url')) {
+    function abs_url($href, $base)
+    {
+        $href = trim($href);
+        if ($href === '') {
+            return '';
+        }
+        if (strpos($href, '//') === 0) {
+            return 'https:' . $href;
+        }
+        if (preg_match('#^https?://#i', $href)) {
+            return $href;
+        }
+        return $base . '/' . ltrim($href, '/');
     }
-    if (strpos($href, '//') === 0) {
-        return 'https:' . $href;
-    }
-    if (preg_match('#^https?://#i', $href)) {
-        return $href;
-    }
-    return $base . '/' . ltrim($href, '/');
 }
 
 /**

@@ -20,6 +20,12 @@ class BookSearch
 
     /** Per-engine metadata: label, the scraper library file, and default domain. */
     public const ENGINES = [
+        'libgen' => [
+            'label'          => 'Library Genesis',
+            'lib'            => 'temp/libgen.php',     // relative to public_path()
+            'default_domain' => 'https://libgen.li',
+            'domain_key'     => 'book_search.domain.libgen',
+        ],
         'annas' => [
             'label'          => "Anna's Archive",
             'lib'            => 'temp/annas.php',     // relative to public_path()
@@ -35,9 +41,9 @@ class BookSearch
     ];
 
     /** Engine used when nothing has been configured yet. */
-    public const DEFAULT_ENGINE = 'annas';
+    public const DEFAULT_ENGINE = 'libgen';
 
-    /** The active engine slug ('annas' | 'zlib'), validated against ENGINES. */
+    /** The active engine slug ('libgen' | 'annas' | 'zlib'), validated against ENGINES. */
     public static function engine(): string
     {
         $engine = (string) Setting::get(self::KEY_ENGINE, self::DEFAULT_ENGINE);

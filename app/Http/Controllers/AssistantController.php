@@ -424,9 +424,9 @@ class AssistantController
 
         $description = $this->fetchBookDescription($match, $md5, $engine);
 
-        // Anna's "url" is the md5 landing page; Z-Library carries a direct
-        // download link separate from its detail page.
-        $downloadUrl = $engine === 'zlib'
+        // Anna's "url" is the md5 landing page; Z-Library and Libgen carry a direct
+        // download link separate from their detail page.
+        $downloadUrl = in_array($engine, ['zlib', 'libgen'], true)
             ? (($match['download'] ?? '') ?: ($match['url'] ?? null))
             : ($match['url'] ?? null);
 
@@ -533,12 +533,31 @@ class AssistantController
             ];
         }
 
-        try {
-            $raw = $engine === 'zlib'
-                ? $this->scrapeZlib($query, $domain, $libPath)
-                : $this->scrapeAnnas($query, $domain, $libPath);
-        } catch (\Throwable $e) {
-            $raw = null;
+        $raw = null;
+        if (is_file($libPath)) {
+            try {
+                $raw = match ($engine) {
+                    'zlib'   => $this->scrapeZlib($query, $domain, $libPath),
+                    'libgen' => $this->scrapeLibgen($query, $domain, $libPath),
+                    default  => $this->scrapeAnnas($query, $domain, $libPath),
+                };
+            } catch (\Throwable $e) {
+                \Log::warning("Book search engine {$engine} failed: " . $e->getMessage());
+                $raw = null;
+            }
+        }
+
+        // If the selected engine produced no results (e.g. anti-bot/WAF block or outage)
+        // and it wasn't already libgen, fall back to Library Genesis so searches succeed.
+        if (empty($raw) && $engine !== 'libgen') {
+            $fallbackLib = BookSearch::libPath('libgen');
+            if (is_file($fallbackLib)) {
+                try {
+                    $raw = $this->scrapeLibgen($query, BookSearch::domain('libgen'), $fallbackLib);
+                } catch (\Throwable $e) {
+                    \Log::warning("Fallback book search engine libgen failed: " . $e->getMessage());
+                }
+            }
         }
 
         if ($raw === null) {
@@ -565,6 +584,22 @@ class AssistantController
             'count'   => count($results),
             'results' => $results,
         ];
+    }
+
+    /** Library Genesis crawler → rows carry real md5, covers, and direct downloads. */
+    private function scrapeLibgen(string $query, string $domain, string $libPath): ?array
+    {
+        if (!defined('LIBGEN_LIBRARY_ONLY')) define('LIBGEN_LIBRARY_ONLY', true);
+        require_once $libPath;
+        if (!function_exists('crawl_libgen')) return null;
+
+        [$raw, $status, $error, $source] = crawl_libgen($query, 1, $domain);
+        if ($error !== null || empty($raw)) return null;
+
+        return collect($raw ?: [])->map(function ($r) {
+            $r['_engine'] = 'libgen';
+            return $r;
+        })->all();
     }
 
     /** Anna's Archive crawler → rows already carry a real md5. Returns null on error. */
@@ -624,7 +659,65 @@ class AssistantController
         if ($engine === 'zlib') {
             return $this->fetchZlibDescription($match['url'] ?? '');
         }
+        if ($engine === 'libgen') {
+            return $this->fetchLibgenDescription($match, $md5);
+        }
         return $this->fetchBookDetailPage($md5)['description'] ?? null;
+    }
+
+    /**
+     * Description lookup for Library Genesis books via OpenLibrary synopsis.
+     */
+    private function fetchLibgenDescription(array $match, string $md5): ?string
+    {
+        $title = trim($match['title'] ?? '');
+        if ($title === '') return null;
+
+        $cacheKey = 'assistant:book:detail:libgen:' . $md5;
+        return Cache::remember($cacheKey, now()->addHours(6), function () use ($match, $title) {
+            $author = trim($match['author'] ?? '');
+            try {
+                $params = ['title' => $title, 'limit' => 1];
+                if ($author !== '') {
+                    $params['author'] = $author;
+                }
+                $url = 'https://openlibrary.org/search.json?' . http_build_query($params);
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 4,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_USERAGENT      => 'Tanbat/1.0 (+https://tanbat.com)',
+                ]);
+                $res = curl_exec($ch);
+                curl_close($ch);
+                if (!$res) return null;
+
+                $data = json_decode($res, true);
+                $workKey = $data['docs'][0]['key'] ?? null;
+                if (!$workKey) return null;
+
+                $workUrl = 'https://openlibrary.org' . $workKey . '.json';
+                $ch2 = curl_init($workUrl);
+                curl_setopt_array($ch2, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 4,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_USERAGENT      => 'Tanbat/1.0 (+https://tanbat.com)',
+                ]);
+                $wres = curl_exec($ch2);
+                curl_close($ch2);
+                if (!$wres) return null;
+
+                $wdata = json_decode($wres, true);
+                $desc = $wdata['description'] ?? null;
+                if (is_string($desc)) return trim($desc);
+                if (is_array($desc) && !empty($desc['value'])) return trim((string) $desc['value']);
+            } catch (\Throwable $e) {
+                // non-fatal
+            }
+            return null;
+        });
     }
 
     /**

@@ -36,8 +36,10 @@
                    {{ $active === $slug ? 'checked' : '' }}>
           </span>
           <span class="text-xs text-slate-500">
-            @if ($slug === 'annas')
-              Default source. Searches by md5 and publishes the full library record.
+            @if ($slug === 'libgen')
+              Fast &amp; reliable Library Genesis engine with covers and direct download links.
+            @elseif ($slug === 'annas')
+              Anna's Archive crawler. Searches by md5 and publishes library records.
             @else
               Z-Library scraper (solves the browser proof-of-work challenge server-side).
             @endif
@@ -55,27 +57,21 @@
   <div class="card mt-6 p-6">
     <div class="text-sm font-bold uppercase tracking-wide text-slate-500">Domains</div>
     <div class="mt-1 text-xs text-slate-500">
-      Include the scheme (e.g. <code class="rounded bg-slate-100 px-1.5 py-0.5">https://annas-archive.gl</code>).
-      The trailing slash is added automatically.
+      Include the scheme (e.g. <code class="rounded bg-slate-100 px-1.5 py-0.5">https://libgen.li</code>).
+      The trailing slash is trimmed automatically.
     </div>
 
-    <div class="mt-5 grid gap-5 sm:grid-cols-2">
+    <div class="mt-5 grid gap-5 sm:grid-cols-3">
+      @foreach ($engines as $slug => $e)
       <div>
-        <label for="annas_domain" class="block text-sm font-semibold text-slate-700">{{ $engines['annas']['label'] }} domain</label>
-        <input id="annas_domain" type="text" name="annas_domain"
-               value="{{ old('annas_domain', $engines['annas']['domain']) }}"
+        <label for="{{ $slug }}_domain" class="block text-sm font-semibold text-slate-700">{{ $e['label'] }} domain</label>
+        <input id="{{ $slug }}_domain" type="text" name="{{ $slug }}_domain"
+               value="{{ old($slug . '_domain', $e['domain']) }}"
                class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
-               placeholder="{{ $engines['annas']['default_domain'] }}">
-        <div class="mt-1 text-[11px] text-slate-400">Default: {{ $engines['annas']['default_domain'] }}</div>
+               placeholder="{{ $e['default_domain'] }}">
+        <div class="mt-1 text-[11px] text-slate-400">Default: {{ $e['default_domain'] }}</div>
       </div>
-      <div>
-        <label for="zlib_domain" class="block text-sm font-semibold text-slate-700">{{ $engines['zlib']['label'] }} domain</label>
-        <input id="zlib_domain" type="text" name="zlib_domain"
-               value="{{ old('zlib_domain', $engines['zlib']['domain']) }}"
-               class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
-               placeholder="{{ $engines['zlib']['default_domain'] }}">
-        <div class="mt-1 text-[11px] text-slate-400">Default: {{ $engines['zlib']['default_domain'] }}</div>
-      </div>
+      @endforeach
     </div>
   </div>
 

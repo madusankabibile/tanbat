@@ -39,13 +39,15 @@ class BookSearchController extends Controller
     {
         $data = $request->validate([
             'engine'        => 'required|in:' . implode(',', array_keys(BookSearch::ENGINES)),
-            'annas_domain'  => 'required|string|max:255',
-            'zlib_domain'   => 'required|string|max:255',
+            'libgen_domain' => 'nullable|string|max:255',
+            'annas_domain'  => 'nullable|string|max:255',
+            'zlib_domain'   => 'nullable|string|max:255',
         ]);
 
         BookSearch::setEngine($data['engine']);
-        BookSearch::setDomain('annas', $data['annas_domain']);
-        BookSearch::setDomain('zlib', $data['zlib_domain']);
+        if (!empty($data['libgen_domain'])) BookSearch::setDomain('libgen', $data['libgen_domain']);
+        if (!empty($data['annas_domain']))  BookSearch::setDomain('annas', $data['annas_domain']);
+        if (!empty($data['zlib_domain']))   BookSearch::setDomain('zlib', $data['zlib_domain']);
 
         $label = BookSearch::ENGINES[$data['engine']]['label'];
 
